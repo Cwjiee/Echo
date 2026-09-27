@@ -31,6 +31,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Protocol version — must match PROTOCOL_VERSION in @echo/local-executor/src/types.ts
+# ---------------------------------------------------------------------------
+PROTOCOL_VERSION = 1
+
+# ---------------------------------------------------------------------------
 # TTL for pending actions in Redis (seconds)
 # ---------------------------------------------------------------------------
 _PENDING_TTL = 86_400  # 24 hours
@@ -74,6 +79,9 @@ class PendingAction:
     created_at: str = field(default_factory=lambda: _utcnow())
     resolved_at: str = ""
     output: str = ""
+    # Populated by the inspect round-trip: local HEAD SHA at the moment the
+    # developer saw the resolution.  Required by apply() to prevent STALE_STATE.
+    base_sha: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -220,6 +228,27 @@ class StateManager:
             action.output = output
         if status in ("completed", "failed", "rejected"):
             action.resolved_at = _utcnow()
+        await self._redis_set(
+            f"echo:pending:{action_id}", action.to_dict(), ttl=_PENDING_TTL
+        )
+        return action
+
+    async def store_inspect_result(
+        self,
+        action_id: str,
+        head_sha: str,
+    ) -> PendingAction | None:
+        """Store the local HEAD SHA reported by the mac-agent's inspect call.
+
+        Called when the mac-agent emits an 'inspect_report' event.
+        The head_sha is later forwarded as base_sha in the ApplyRequest so
+        apply() can verify the local repo hasn't moved since the developer
+        approved the resolution.
+        """
+        action = self._pending.get(action_id)
+        if not action:
+            return None
+        action.base_sha = head_sha
         await self._redis_set(
             f"echo:pending:{action_id}", action.to_dict(), ttl=_PENDING_TTL
         )

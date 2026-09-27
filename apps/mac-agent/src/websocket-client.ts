@@ -61,6 +61,14 @@ export class EchoWebSocketClient extends EventEmitter {
     });
   }
 
+  sendInspectReport(actionId: string, repository: string, headSha: string): void {
+    this.socket?.emit('inspect_report', {
+      action_id: actionId,
+      repository,
+      head_sha: headSha,
+    });
+  }
+
   sendApprovalResponse(
     actionId: string,
     results: Array<{ action: string; success: boolean; stdout: string }>,

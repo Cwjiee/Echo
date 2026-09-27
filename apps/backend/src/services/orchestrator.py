@@ -167,6 +167,7 @@ async def handle_approval(
             "repository": action.repository,
             "event_type": action.event_type,
             "approved_by": approved_by,
+            "base_sha": action.base_sha,   # set by inspect round-trip
             **action.context,
         },
     )

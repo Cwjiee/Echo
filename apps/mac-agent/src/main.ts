@@ -21,6 +21,7 @@ import {
 import { store } from './settings-store';
 import { EchoWebSocketClient } from './websocket-client';
 import { executeResolution } from './executor-bridge';
+import type { ApplyRequest } from '@echo/local-executor';
 
 // ── App Configuration ──────────────────────────────────────────────────────
 app.setName('echo-mac-agent');
@@ -124,17 +125,7 @@ function connect(): void {
 
   wsClient.on('approved_resolution', (payload) => {
     showNotification('Echo Agent', `Executing: ${payload.actions.join(', ')}`);
-    // apply() converts an action that throws into an ENGINE_ERROR result, but a
-    // failure before the snapshot still rejects. Without this catch the backend
-    // never hears, and the Discord thread waits forever on step 12.
-    void executeResolution(payload)
-      .then((result) => {
-        wsClient?.sendApprovalResponse(payload.action_id, result.results);
-      })
-      .catch((error: unknown) => {
-        console.error(`[executor] ${payload.action_id} failed before execution:`, error);
-        wsClient?.sendApprovalResponse(payload.action_id, []);
-      });
+    void runInspectThenApply(payload);
   });
 
   wsClient.connect();
@@ -233,5 +224,57 @@ function registerIpcHandlers(): void {
 function showNotification(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title, body }).show();
+  }
+}
+
+// ── Inspect → Apply pipeline ───────────────────────────────────────────────
+//
+// Flow:
+//   1. Receive approved_resolution (ApplyRequest with empty base_sha)
+//   2. Run inspect() locally to get the real HEAD SHA
+//   3. Emit inspect_report to backend — backend stores head_sha on PendingAction
+//   4. Wait for inspect_ack from backend (confirms sha was recorded)
+//   5. Execute apply() with the full payload (base_sha now set server-side;
+//      the backend re-emits approved_resolution with it populated if needed,
+//      but for the initial impl we patch it in locally from the InspectReport)
+//   6. Send approval_response with results
+
+async function runInspectThenApply(payload: ApplyRequest): Promise<void> {
+  const { inspect } = await import('@echo/local-executor');
+
+  let headSha = payload.base_sha;
+
+  // If backend didn't supply base_sha yet, run inspect() to get it locally.
+  if (!headSha) {
+    try {
+      const report = await inspect({
+        protocol_version: payload.protocol_version,
+        request_id: payload.action_id,
+        repository: payload.repository,
+        workdir: payload.context?.workdir,
+      });
+      headSha = report.head_sha;
+
+      // Tell the backend so it can record it and use it for future re-approvals.
+      wsClient?.sendInspectReport(payload.action_id, payload.repository, headSha);
+      console.log(`[inspector] ${payload.action_id} head_sha=${headSha}`);
+    } catch (err) {
+      console.error(`[inspector] inspect() failed for ${payload.repository}:`, err);
+      // Can't get a valid base_sha — report failure immediately rather than
+      // letting apply() reject with an unhelpful STALE_STATE.
+      wsClient?.sendApprovalResponse(payload.action_id, []);
+      return;
+    }
+  }
+
+  // Patch base_sha into the payload before handing to apply().
+  const fullPayload: ApplyRequest = { ...payload, base_sha: headSha };
+
+  try {
+    const result = await executeResolution(fullPayload);
+    wsClient?.sendApprovalResponse(payload.action_id, result.results);
+  } catch (error: unknown) {
+    console.error(`[executor] ${payload.action_id} failed before execution:`, error);
+    wsClient?.sendApprovalResponse(payload.action_id, []);
   }
 }
