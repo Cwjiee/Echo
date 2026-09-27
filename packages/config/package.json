@@ -1,0 +1,9 @@
+{
+  "name": "@echo/config",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./eslint": "./eslint.js"
+  }
+}

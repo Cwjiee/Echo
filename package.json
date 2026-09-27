@@ -1,0 +1,34 @@
+{
+  "name": "echo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AI-powered DevEx tool — automates codebase updates via GitHub webhooks, AI summaries, Discord/Slack notifications, and local Mac execution.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:backend": "turbo run dev --filter=@echo/backend",
+    "dev:bot": "turbo run dev --filter=@echo/bot",
+    "dev:mac-agent": "turbo run dev --filter=@echo/mac-agent",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "type-check": "turbo run type-check",
+    "postinstall": "node ./node_modules/electron/install.js",
+    "docker:up": "docker compose -f apps/backend/docker-compose.yml up -d postgres redis",
+    "docker:up:all": "docker compose -f apps/backend/docker-compose.yml up -d",
+    "docker:down": "docker compose -f apps/backend/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.8.0"
+}

@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Echo Backend — AWS SAM deployment
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.12
+    Environment:
+      Variables:
+        REDIS_URL: !Sub 'redis://${ElastiCacheEndpoint}:6379/0'
+        DATABASE_URL: !Sub 'postgresql+asyncpg://${DBUser}:${DBPassword}@${DBEndpoint}:5432/echo'
+
+Parameters:
+  DBUser:
+    Type: String
+    Default: echo
+  DBPassword:
+    Type: String
+    NoEcho: true
+  DBEndpoint:
+    Type: String
+  ElastiCacheEndpoint:
+    Type: String
+
+Resources:
+  EchoBackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: echo-backend
+      CodeUri: ../../
+      Handler: src.main.handler  # Mangum adapter — add mangum to requirements.txt
+      Description: Echo FastAPI backend
+      Events:
+        ApiGateway:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/'

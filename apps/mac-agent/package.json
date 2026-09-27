@@ -1,0 +1,28 @@
+{
+  "name": "@echo/mac-agent",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "tsc && electron .",
+    "build": "tsc --project tsconfig.json",
+    "package": "electron-forge package",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist out"
+  },
+  "dependencies": {
+    "@echo/local-executor": "*",
+    "electron-store": "^10.0.0",
+    "socket.io-client": "^4.7.5"
+  },
+  "devDependencies": {
+    "@echo/config": "*",
+    "@electron-forge/cli": "^7.4.0",
+    "@electron-forge/maker-dmg": "^7.4.0",
+    "@electron-forge/maker-zip": "^7.4.0",
+    "@types/node": "^20.12.12",
+    "electron": "^31.0.0",
+    "typescript": "^5.4.5"
+  }
+}
