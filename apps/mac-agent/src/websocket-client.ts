@@ -58,7 +58,12 @@ export class EchoWebSocketClient extends EventEmitter {
 
     this.socket.on('connect_error', (err: Error) => {
       console.error('[mac-agent:ws] Connection error:', err.message);
+      this.emit('connect_error', err);
     });
+  }
+
+  get socketId(): string | undefined {
+    return this.socket?.id;
   }
 
   sendInspectReport(actionId: string, repository: string, headSha: string): void {

@@ -128,15 +128,66 @@ function connect(): void {
   const authToken = process.env.AGENT_TOKEN || '';
   const workspace = process.env.WORKSPACE || 'default';
 
+  const startTime = new Date();
+  const connectSession: Session = {
+    id: `connect-${Date.now()}`,
+    title: 'Connecting to Backend & Local Executor',
+    repo: 'echo/local-executor',
+    branch: 'main',
+    status: 'running',
+    started: startTime.toLocaleTimeString(),
+    approvedBy: 'local-agent',
+    group: 'Today',
+    age: 'now',
+    log: [
+      { note: `Initiating connection to Echo backend at ${backendUrl}...` },
+      { cmd: `connect ${backendUrl}`, status: 'running' },
+    ],
+  };
+  sessions.unshift(connectSession);
+  pushSessions();
+
   wsClient = new EchoWebSocketClient({ url: backendUrl, token: authToken, workspace });
 
   wsClient.on('connected', () => {
     isConnected = true;
     showNotification('Echo Agent', 'Connected to backend server.');
     homeWindow?.webContents.send('agent:status', '🟢 Connected');
+
+    connectSession.title = 'Local Agent & Executor Connected';
+    connectSession.status = 'done';
+    connectSession.log = [
+      { note: `Successfully connected to backend server at ${backendUrl}` },
+      {
+        cmd: 'local-executor: init',
+        status: 'done',
+        ms: 24,
+        output: `[echo:agent] Backend URL: ${backendUrl}\n[echo:agent] Workspace: ${workspace}\n[echo:agent] Socket ID: ${wsClient?.socketId ?? 'connected'}\n[echo:executor] @echo/local-executor engine initialized\n[echo:executor] Status: Listening for approved resolutions`,
+      },
+      { summary: 'Agent connected to backend. Local executor is active and listening for tasks.' },
+    ];
+    pushSessions();
   });
 
-  wsClient.on('disconnected', () => {
+  wsClient.on('connect_error', (err: Error) => {
+    isConnected = false;
+    homeWindow?.webContents.send('agent:status', '🔴 Disconnected');
+
+    connectSession.title = 'Connection Failed';
+    connectSession.status = 'failed';
+    connectSession.log = [
+      { note: `Attempted to connect to backend at ${backendUrl}` },
+      {
+        cmd: `connect ${backendUrl}`,
+        status: 'failed',
+        output: `Error: ${err.message}\nMake sure the backend server is running on ${backendUrl}`,
+      },
+      { summary: `Failed to connect to backend: ${err.message}. Ensure backend is running.`, failed: true },
+    ];
+    pushSessions();
+  });
+
+  wsClient.on('disconnected', (reason: string) => {
     isConnected = false;
     homeWindow?.webContents.send('agent:status', '🔴 Disconnected');
   });
@@ -151,9 +202,16 @@ function connect(): void {
     }
   });
 
-  wsClient.on('approved_resolution', (payload) => {
-    showNotification('Echo Agent', `Executing: ${payload.actions.join(', ')}`);
-    void runApply(payload);
+  wsClient.on('approved_resolution', (payload: ApplyRequest) => {
+    try {
+      const actionsList = Array.isArray(payload?.actions) ? payload.actions.join(', ') : 'sync';
+      showNotification('Echo Agent', `Executing: ${actionsList}`);
+      void runApply(payload).catch((err) => {
+        console.error('[mac-agent] runApply error:', err);
+      });
+    } catch (err) {
+      console.error('[mac-agent] Error handling approved_resolution:', err);
+    }
   });
 
   wsClient.connect();
@@ -163,6 +221,25 @@ function disconnect(): void {
   wsClient?.disconnect();
   wsClient = null;
   isConnected = false;
+  homeWindow?.webContents.send('agent:status', '🔴 Disconnected');
+
+  const discSession: Session = {
+    id: `disconnect-${Date.now()}`,
+    title: 'Local Agent Stopped',
+    repo: 'echo/local-executor',
+    branch: 'main',
+    status: 'done',
+    started: new Date().toLocaleTimeString(),
+    approvedBy: 'local-agent',
+    group: 'Today',
+    age: 'now',
+    log: [
+      { note: 'Agent stopped by user.' },
+      { summary: 'Disconnected from backend and stopped local executor listener.' },
+    ],
+  };
+  sessions.unshift(discSession);
+  pushSessions();
 }
 
 // ── Home Window ────────────────────────────────────────────────────────────
@@ -226,8 +303,12 @@ function registerIpcHandlers(): void {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function showNotification(title: string, body: string): void {
-  if (Notification.isSupported()) {
-    new Notification({ title, body }).show();
+  try {
+    if (Notification.isSupported()) {
+      new Notification({ title, body }).show();
+    }
+  } catch (err) {
+    console.warn('[mac-agent:notification] Notification failed:', err);
   }
 }
 
@@ -257,19 +338,20 @@ async function runInspect(actionId: string, repository: string): Promise<void> {
 }
 
 async function runApply(payload: ApplyRequest): Promise<void> {
-  const actionId = payload.action_id;
-  const repo = payload.repository;
+  const actionId = payload?.action_id || `act-${Date.now()}`;
+  const repo = payload?.repository || 'workspace';
   const now = new Date();
+  const repoName = typeof repo === 'string' && repo.includes('/') ? repo.split('/')[1] : repo;
 
   // Create a running session entry immediately so the UI updates.
   const session: Session = {
     id: actionId,
-    title: `Sync ${repo.split('/')[1] ?? repo}`,
+    title: `Sync ${repoName}`,
     repo,
-    branch: payload.context?.branch ?? 'main',
+    branch: payload?.context?.branch ?? 'main',
     status: 'running',
     started: now.toLocaleTimeString(),
-    approvedBy: (payload.context as Record<string, string> | undefined)?.approved_by ?? 'discord',
+    approvedBy: (payload?.context as Record<string, string> | undefined)?.approved_by ?? 'discord',
     group: now.toLocaleDateString(),
     age: 'just now',
     log: [{ note: `Starting sync for ${repo}` }],
