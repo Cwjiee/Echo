@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="444" height="313" viewBox="0 0 444 313" fill="none">
+  <title>Echo bat (awake)</title>
+  <desc>A hand-drawn bat with a warm gray body and transparent background.</desc>
+
+  <!-- Left wing -->
+  <path
+    d="M151 128
+       C128 141 102 154 72 171
+       C66 175 67 181 73 185
+       L87 195
+       C91 198 97 197 102 195
+       L116 190
+       C121 188 125 191 128 196
+       C132 203 139 207 146 205
+       C154 202 160 194 165 184"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Right wing -->
+  <path
+    d="M276 129
+       C304 143 336 157 377 177
+       C382 180 381 185 375 187
+       L357 194
+       C352 196 348 195 344 193
+       L333 201
+       C328 205 323 205 317 202
+       L300 194
+       C295 192 292 194 289 199
+       C285 207 277 210 269 207
+       C262 204 258 197 255 190"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Ears -->
+  <path
+    d="M157 119
+       C161 93 171 71 182 56
+       C185 52 189 56 192 62
+       C198 73 201 87 202 104
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+  <path
+    d="M238 105
+       C244 87 253 70 261 67
+       C266 65 269 72 271 80
+       C275 94 277 111 276 130
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Body -->
+  <path
+    d="M214 100
+       C246 100 273 120 281 148
+       C287 169 278 194 261 204
+       C245 214 218 216 192 211
+       C165 206 148 191 146 168
+       C143 145 153 122 171 110
+       C182 103 197 100 214 100
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Face -->
+  <ellipse cx="176" cy="144" rx="7" ry="5" fill="#000000"/>
+  <ellipse cx="239" cy="157" rx="7" ry="6" fill="#000000"/>
+  <path
+    d="M192 157
+       C192 169 198 175 206 175
+       C214 175 220 168 220 158"
+    style="fill:none;stroke:#000000;stroke-width:7;stroke-linecap:round"
+  />
+
+  <!-- Legs -->
+  <path d="M195 212 C195 222 196 229 197 235" style="fill:none;stroke:#000000;stroke-width:8;stroke-linecap:round"/>
+  <path d="M235 214 C235 221 236 227 237 232" style="fill:none;stroke:#000000;stroke-width:8;stroke-linecap:round"/>
+</svg>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;"
+  />
+  <title>Echo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600&family=Lexend+Zetta:wght@700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ── Tokens: "Midnight Sky Blues" ─────────────────────────────────────── */
+    :root {
+      --ink: #1f1f2d;    /* window background */
+      --slate: #333f4c;  /* raised surfaces */
+      --dusk: #3d4051;   /* borders, hover */
+      --haze: #5d5e76;   /* muted text */
+      --sage: #59747b;   /* accent, echo ripples */
+      --fur: #ccc5b9;    /* primary text, bat body */
+
+      --sidebar-bg: #1a1a26;
+      --font-display: 'Lexend Zetta', sans-serif;
+      --font-body: 'League Spartan', -apple-system, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+      --sidebar-w: 200px;
+      --sidebar-w-collapsed: 64px;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      display: flex;
+      background: var(--ink);
+      color: var(--fur);
+      font-family: var(--font-body);
+      font-size: 15px;
+      overflow: hidden;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+
+    /* ── Sidebar ──────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0 10px 12px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--dusk);
+      transition: width 220ms var(--ease-out);
+    }
+
+    /* Space for the macOS traffic lights; also the window drag handle. */
+    .titlebar-spacer { height: 38px; flex-shrink: 0; -webkit-app-region: drag; }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 36px;
+      padding: 0 4px 0 6px;
+      margin-bottom: 14px;
+    }
+
+    .sidebar-logo { width: 38px; height: 24px; flex-shrink: 0; }
+
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      color: var(--haze);
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+    .icon-btn:hover { color: var(--fur); background: var(--dusk); }
+    .icon-btn svg { width: 16px; height: 16px; }
+
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 8px;
+      color: var(--haze);
+      font-size: 15px;
+      font-weight: 500;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: color 150ms ease, background-color 150ms ease;
+    }
+    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-item:hover { color: var(--fur); background: rgba(61, 64, 81, 0.5); }
+    .nav-item[aria-current='page'] { color: var(--fur); background: var(--slate); }
+
+    /* Collapsed: icon-only rail, with the logo stacked above the toggle. */
+    body.collapsed .sidebar { width: var(--sidebar-w-collapsed); }
+    body.collapsed .sidebar-header {
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+      height: auto;
+      padding: 0;
+    }
+    body.collapsed .nav-label { display: none; }
+    body.collapsed .nav-item { justify-content: center; padding: 0; }
+
+    /* ── Main pane ────────────────────────────────────────────────────────── */
+    .main {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main .titlebar-spacer { position: absolute; inset: 0 0 auto 0; }
+
+    .view { flex: 1; display: none; }
+    .view.active { display: flex; }
+
+    .home {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      padding: 40px 32px 56px;
+    }
+
+    .hero {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      isolation: isolate;
+    }
+
+    .bat {
+      position: relative;
+      width: 148px;
+      height: 90px;
+      flex-shrink: 0;
+    }
+    /* Hover in place while listening, like a bat treading air. */
+    body.listening .bat { animation: float 3.2s ease-in-out infinite; }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-7px); }
+    }
+    .bat svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transition: opacity 280ms ease, transform 380ms var(--ease-out);
+    }
+
+    .bat .bat-awake { opacity: 0; transform: translateY(6px) scale(0.92); }
+    body.listening .bat .bat-awake { opacity: 1; transform: none; }
+    body.listening .bat .bat-sleeping { opacity: 0; transform: translateY(4px) scale(0.96); }
+
+    .wordmark {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 38px;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+
+    /* ── Echo field: a dot grid that lights up as sonar waves pass through ── */
+    .echo-field {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 500ms ease;
+    }
+    body.listening .echo-field { opacity: 1; }
+    .view { position: relative; z-index: 1; }
+
+    /* ── Start / Stop ─────────────────────────────────────────────────────── */
+    .toggle {
+      width: 240px;
+      height: 48px;
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      background: var(--fur);
+      color: var(--ink);
+      border: 1px solid var(--fur);
+      transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease,
+        transform 120ms ease;
+    }
+    .toggle:hover { background: #ddd7cc; }
+    .toggle:active { transform: scale(0.97); }
+
+    body.listening .toggle {
+      background: var(--ink);
+      color: var(--fur);
+      border-color: var(--dusk);
+    }
+    body.listening .toggle:hover { background: #2a2c3c; border-color: var(--haze); }
+
+    /* ── Running command ──────────────────────────────────────────────────── */
+    .command {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #262b38;
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 240ms ease, transform 300ms var(--ease-out), visibility 0s 240ms;
+    }
+    body.listening .command {
+      visibility: visible;
+      opacity: 1;
+      transform: none;
+      transition: opacity 240ms ease 120ms, transform 300ms var(--ease-out) 120ms;
+    }
+    .command-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--haze);
+    }
+    .command code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--fur);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .command code::before { content: '$ '; color: var(--haze); }
+
+    .spinner {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      border: 2px solid var(--dusk);
+      border-top-color: var(--sage);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer {
+      position: absolute;
+      bottom: 14px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--haze);
+    }
+
+    /* ── Activity (placeholder until we design it) ────────────────────────── */
+    .activity { align-items: center; justify-content: center; color: var(--haze); }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.listening .bat { animation: none; }
+      .spinner { animation-duration: 2.4s; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Shared bat artwork. Both states use the same viewBox so they crossfade in place. -->
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <g id="bat-awake">
+        <g fill="#ccc5b9" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke="#0e0e16">
+          <path d="M151 128 C128 141 102 154 72 171 C66 175 67 181 73 185 L87 195 C91 198 97 197 102 195 L116 190 C121 188 125 191 128 196 C132 203 139 207 146 205 C154 202 160 194 165 184" />
+          <path d="M276 129 C304 143 336 157 377 177 C382 180 381 185 375 187 L357 194 C352 196 348 195 344 193 L333 201 C328 205 323 205 317 202 L300 194 C295 192 292 194 289 199 C285 207 277 210 269 207 C262 204 258 197 255 190" />
+          <path d="M157 119 C161 93 171 71 182 56 C185 52 189 56 192 62 C198 73 201 87 202 104 Z" />
+          <path d="M238 105 C244 87 253 70 261 67 C266 65 269 72 271 80 C275 94 277 111 276 130 Z" />
+          <path d="M214 100 C246 100 273 120 281 148 C287 169 278 194 261 204 C245 214 218 216 192 211 C165 206 148 191 146 168 C143 145 153 122 171 110 C182 103 197 100 214 100 Z" />
+        </g>
+        <ellipse cx="176" cy="144" rx="7" ry="5" fill="#000" />
+        <ellipse cx="239" cy="157" rx="7" ry="6" fill="#000" />
+        <path d="M192 157 C192 169 198 175 206 175 C214 175 220 168 220 158" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" />
+        <g fill="none" stroke-width="8" stroke-linecap="round" stroke="#0e0e16">
+          <path d="M195 212 C195 222 196 229 197 235" />
+          <path d="M235 214 C235 221 236 227 237 232" />
+        </g>
+      </g>
+      <g id="bat-sleeping">
+        <g fill="#ccc5b9" stroke="#0e0e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M164 129 C167 101 176 77 187 62 C190 58 194 63 197 69 C202 81 204 96 204 111 Z" />
+          <path d="M239 111 C245 91 254 74 263 71 C268 70 270 77 272 84 C275 99 277 115 275 132 Z" />
+          <path d="M217 107 C250 107 275 126 282 153 C289 180 279 208 259 221 C241 233 210 235 184 227 C159 219 145 201 145 176 C145 151 155 129 174 117 C185 110 200 107 217 107 Z" />
+        </g>
+        <g fill="none" stroke="#000" stroke-width="7" stroke-linecap="round">
+          <path d="M176 151 C181 156 187 156 192 151" />
+          <path d="M237 151 C242 156 248 156 253 151" />
+        </g>
+        <g fill="#ccc5b9" stroke="#0e0e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M151 137 C170 140 190 149 205 161 C222 174 231 190 232 207 L234 226 C235 234 226 239 217 234 L195 225 C190 222 186 223 182 228 L173 237 C168 242 161 239 159 232 L154 219 C152 214 148 211 143 212 L128 214 C121 215 117 210 120 203 C126 183 136 157 151 137 Z" />
+          <path d="M279 137 C261 140 243 149 229 161 C217 172 212 188 212 205 L210 224 C209 232 216 237 223 233 L237 225 C242 222 246 223 250 228 L259 237 C264 242 271 239 273 232 L278 219 C280 214 284 211 289 212 L304 214 C311 215 315 210 312 203 C306 183 295 157 279 137 Z" />
+        </g>
+      </g>
+    </defs>
+  </svg>
+
+  <aside class="sidebar">
+    <div class="titlebar-spacer"></div>
+    <div class="sidebar-header">
+      <svg class="sidebar-logo" viewBox="60 45 330 200" aria-label="Echo"><use href="#bat-awake" /></svg>
+      <button class="icon-btn" id="collapseBtn" aria-label="Collapse sidebar" aria-expanded="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
+          <path d="M6 2.5v11" />
+        </svg>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item" data-view="home" aria-current="page" title="Home">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+          <path d="M2.5 7 8 2.5 13.5 7v6.5h-4v-4h-3v4h-4Z" />
+        </svg>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" data-view="activity" title="Activity">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1.5 8h3l2-5 3 10 2-5h3" />
+        </svg>
+        <span class="nav-label">Activity</span>
+      </button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <canvas class="echo-field" id="echoField" aria-hidden="true"></canvas>
+    <div class="titlebar-spacer"></div>
+
+    <section class="view home active" id="view-home">
+      <div class="hero">
+        <div class="bat" aria-hidden="true">
+          <svg class="bat-sleeping" viewBox="60 45 330 200"><use href="#bat-sleeping" /></svg>
+          <svg class="bat-awake" viewBox="60 45 330 200"><use href="#bat-awake" /></svg>
+        </div>
+        <h1 class="wordmark">ECHO</h1>
+      </div>
+
+      <button class="toggle" id="toggleBtn">START</button>
+
+      <div class="command" id="command" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="command-label">Running</span>
+        <!-- Placeholder until the executor streams real commands in. -->
+        <code id="commandText">git pull --rebase origin main</code>
+      </div>
+
+      <p class="footer">Echo Agent v0.0.1</p>
+    </section>
+
+    <section class="view activity" id="view-activity">
+      <p>Activity — coming soon</p>
+    </section>
+  </main>
+
+  <script>
+    // UI-only state for now; no backend calls are made from this page.
+    const body = document.body;
+    const toggleBtn = document.getElementById('toggleBtn');
+    const collapseBtn = document.getElementById('collapseBtn');
+
+    toggleBtn.addEventListener('click', () => {
+      const listening = body.classList.toggle('listening');
+      toggleBtn.textContent = listening ? 'STOP' : 'START';
+      listening ? echoField.start() : echoField.stop();
+    });
+
+    // ── Echo field ────────────────────────────────────────────────────────
+    // A fixed grid of tiny square dots. Sonar waves expand from the bat and
+    // light up a random subset of the dots they pass, so each ring reads as
+    // scattered sparkle rather than a solid line.
+    const echoField = (() => {
+      const canvas = document.getElementById('echoField');
+      const ctx = canvas.getContext('2d');
+      const main = document.querySelector('.main');
+      const bat = document.querySelector('.bat');
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const SPACING = 14;       // grid pitch, px
+      const DOT = 2;            // dot size, px
+      const SPEED = 120;        // wave speed, px/s
+      const INTERVAL = 1.4;     // seconds between waves
+      const BAND = 16;          // wave thickness, px
+      const DENSITY = 0.45;     // share of dots a wave lights up
+
+      let dots = [];
+      let origin = { x: 0, y: 0 };
+      let maxR = 1;
+      let startedAt = 0;
+      let frame = 0;
+      let running = false;
+
+      const hash = (a, b) => {
+        const x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+        return x - Math.floor(x);
+      };
+
+      function layout() {
+        const dpr = window.devicePixelRatio || 1;
+        const { width, height } = main.getBoundingClientRect();
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const m = main.getBoundingClientRect();
+        const b = bat.getBoundingClientRect();
+        origin = { x: b.left - m.left + b.width / 2, y: b.top - m.top + b.height / 2 };
+
+        dots = [];
+        const offX = origin.x % SPACING;
+        const offY = origin.y % SPACING;
+        for (let y = offY; y < height; y += SPACING) {
+          for (let x = offX; x < width; x += SPACING) {
+            dots.push({ x, y, d: Math.hypot(x - origin.x, y - origin.y), id: dots.length });
+          }
+        }
+        maxR = Math.max(...dots.map((d) => d.d));
+        if (!running) draw(reduceMotion ? 2.2 : 0);
+      }
+
+      function draw(t) {
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+        const newest = Math.floor(t / INTERVAL);
+        const lifetime = maxR / SPEED;
+
+        for (const dot of dots) {
+          // Faint resting grid, dimming away from the bat.
+          const fade = 1 - dot.d / maxR;
+          let a = 0.05 + 0.05 * fade;
+
+          for (let w = newest; w >= 0 && (t - w * INTERVAL) < lifetime; w--) {
+            const r = (t - w * INTERVAL) * SPEED;
+            const off = (dot.d - r) / BAND;
+            if (off > 1.5 || off < -3) continue;
+            const seed = hash(dot.id, w);
+            if (seed > DENSITY) continue;
+            // Sharp leading edge, softer trail behind it.
+            const band = off > 0 ? Math.exp(-off * off * 2) : Math.exp(off);
+            const strength = (1 - r / maxR) ** 1.4;
+            a += band * strength * (0.6 + 0.4 * (seed / DENSITY));
+          }
+
+          if (a < 0.02) continue;
+          ctx.fillStyle = `rgba(204, 197, 185, ${Math.min(a, 0.9)})`;
+          // The brightest dots render a touch larger, like a glint.
+          const size = a > 0.6 ? DOT + 1 : DOT;
+          ctx.fillRect(dot.x - size / 2, dot.y - size / 2, size, size);
+        }
+      }
+
+      function tick(now) {
+        draw((now - startedAt) / 1000);
+        frame = requestAnimationFrame(tick);
+      }
+
+      new ResizeObserver(layout).observe(main);
+      // The bat moves when the sidebar collapses; re-measure once it settles.
+      main.parentElement.querySelector('.sidebar').addEventListener('transitionend', layout);
+
+      return {
+        start() {
+          running = true;
+          if (reduceMotion) return draw(2.2);
+          startedAt = performance.now();
+          cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(tick);
+        },
+        stop() {
+          running = false;
+          // Let the canvas fade out before the loop stops.
+          setTimeout(() => { if (!running) cancelAnimationFrame(frame); }, 500);
+        },
+      };
+    })();
+
+    collapseBtn.addEventListener('click', () => {
+      const collapsed = body.classList.toggle('collapsed');
+      collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+      collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    });
+
+    document.querySelectorAll('.nav-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach((n) => n.removeAttribute('aria-current'));
+        item.setAttribute('aria-current', 'page');
+        document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+        document.getElementById(`view-${item.dataset.view}`).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
