@@ -22,10 +22,24 @@ interface BackendClientOptions {
   workspace: string;
 }
 
-interface GithubEventPayload {
+interface AnalysisResult {
+  action_id: string;
   event_type: string;
   summary: string;
-  raw: Record<string, unknown>;
+  severity: 'info' | 'warning' | 'critical';
+  requires_approval: boolean;
+  conflict: { has_conflict: boolean; conflict_type: string; affected_files: string[] };
+  resolution: { steps: string[]; actions: string[] };
+}
+
+interface GithubEventPayload {
+  event_type: string;
+  analysis: AnalysisResult;
+}
+
+interface SyncStatusPayload {
+  status: 'success' | 'error';
+  message: string;
 }
 
 export class BackendClient {
@@ -65,6 +79,10 @@ export class BackendClient {
       void this.handleGithubEvent(payload);
     });
 
+    this.socket.on('sync_status', (payload: SyncStatusPayload) => {
+      void this.handleSyncStatus(payload);
+    });
+
     this.socket.on('connect_error', (err) => {
       console.error('[bot:ws] Connection error:', err.message);
     });
@@ -85,25 +103,51 @@ export class BackendClient {
     const channel = this.discordClient.channels.cache.get(channelId) as TextChannel | undefined;
     if (!channel) return;
 
-    const actionId = `auto-${Date.now()}`;
+    const { analysis, event_type } = payload;
+    const actionId = analysis.action_id;  // use the real ID from the backend
+
+    const severityColour = { info: 0x5865f2, warning: 0xfee75c, critical: 0xed4245 } as const;
+    const colour = severityColour[analysis.severity] ?? 0x5865f2;
 
     const embed = new EmbedBuilder()
-      .setTitle(`🔔 GitHub Event: ${payload.event_type}`)
-      .setDescription(payload.summary)
-      .setColor(0x5865f2)
+      .setTitle(`🔔 GitHub Event: ${event_type}`)
+      .setDescription(analysis.summary || 'No summary available.')
+      .addFields(
+        { name: 'Severity', value: analysis.severity, inline: true },
+        { name: 'Conflict', value: analysis.conflict.has_conflict ? `⚠️ ${analysis.conflict.conflict_type}` : '✅ None', inline: true },
+        { name: 'Steps', value: analysis.resolution.steps.slice(0, 3).join('\n') || 'No steps.', inline: false },
+      )
+      .setColor(colour)
       .setTimestamp();
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`approve_sync:${actionId}`)
-        .setLabel('✅ Sync Local Env')
+        .setLabel('Sync Local Env')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`dismiss_sync:${actionId}`)
-        .setLabel('❌ Dismiss')
+        .setLabel('Dismiss')
         .setStyle(ButtonStyle.Danger),
     );
 
     await channel.send({ embeds: [embed], components: [row] });
+  }
+
+  private async handleSyncStatus(payload: SyncStatusPayload): Promise<void> {
+    const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
+    if (!channelId || !this.discordClient) return;
+
+    const channel = this.discordClient.channels.cache.get(channelId) as TextChannel | undefined;
+    if (!channel) return;
+
+    const isSuccess = payload.status === 'success';
+    const embed = new EmbedBuilder()
+      .setTitle(isSuccess ? '✅ Sync Complete' : '❌ Sync Failed')
+      .setDescription(payload.message)
+      .setColor(isSuccess ? 0x57f287 : 0xed4245)
+      .setTimestamp();
+
+    await channel.send({ embeds: [embed] });
   }
 }
