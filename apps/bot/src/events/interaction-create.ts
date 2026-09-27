@@ -47,11 +47,11 @@ async function handleSyncCommand(interaction: Interaction): Promise<void> {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`approve_sync:${actionId}`)
-      .setLabel('✅ Sync Local Env')
+      .setLabel('Sync Local Env')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(`dismiss_sync:${actionId}`)
-      .setLabel('❌ Dismiss')
+      .setLabel('Dismiss')
       .setStyle(ButtonStyle.Danger),
   );
 

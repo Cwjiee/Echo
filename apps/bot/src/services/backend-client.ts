@@ -28,6 +28,11 @@ interface GithubEventPayload {
   raw: Record<string, unknown>;
 }
 
+interface SyncStatusPayload {
+  status: 'success' | 'error';
+  message: string;
+}
+
 export class BackendClient {
   private socket: Socket | null = null;
   private discordClient: Client | null = null;
@@ -65,6 +70,10 @@ export class BackendClient {
       void this.handleGithubEvent(payload);
     });
 
+    this.socket.on('sync_status', (payload: SyncStatusPayload) => {
+      void this.handleSyncStatus(payload);
+    });
+
     this.socket.on('connect_error', (err) => {
       console.error('[bot:ws] Connection error:', err.message);
     });
@@ -96,14 +105,31 @@ export class BackendClient {
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`approve_sync:${actionId}`)
-        .setLabel('✅ Sync Local Env')
+        .setLabel('Sync Local Env')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`dismiss_sync:${actionId}`)
-        .setLabel('❌ Dismiss')
+        .setLabel('Dismiss')
         .setStyle(ButtonStyle.Danger),
     );
 
     await channel.send({ embeds: [embed], components: [row] });
+  }
+
+  private async handleSyncStatus(payload: SyncStatusPayload): Promise<void> {
+    const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
+    if (!channelId || !this.discordClient) return;
+
+    const channel = this.discordClient.channels.cache.get(channelId) as TextChannel | undefined;
+    if (!channel) return;
+
+    const isSuccess = payload.status === 'success';
+    const embed = new EmbedBuilder()
+      .setTitle(isSuccess ? '✅ Sync Complete' : '❌ Sync Failed')
+      .setDescription(payload.message)
+      .setColor(isSuccess ? 0x57f287 : 0xed4245)
+      .setTimestamp();
+
+    await channel.send({ embeds: [embed] });
   }
 }

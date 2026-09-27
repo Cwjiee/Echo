@@ -9,7 +9,10 @@
  */
 
 import 'dotenv/config';
-import { Client, GatewayIntentBits } from 'discord.js';
+import {
+  Client,
+  GatewayIntentBits,
+} from 'discord.js';
 import { registerEvents } from './events/registry';
 import { BackendClient } from './services/backend-client';
 
@@ -21,6 +24,10 @@ const discordClient = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
+});
+
+discordClient.once('ready', () => {
+  console.log(`Echo is online and logged in as ${discordClient.user?.tag}`);
 });
 
 // ── Backend WebSocket Client ────────────────────────────────────────────────
@@ -43,6 +50,7 @@ async function main() {
   backendClient.setDiscordClient(discordClient);
   backendClient.connect();
   console.log('[bot] Backend WebSocket connecting...');
+
 }
 
 main().catch((err) => {
