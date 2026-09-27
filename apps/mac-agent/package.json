@@ -4,6 +4,7 @@
   "private": true,
   "main": "dist/main.js",
   "scripts": {
+    "postinstall": "./scripts/sign-electron.sh",
     "dev": "tsc && electron .",
     "build": "tsc --project tsconfig.json",
     "package": "electron-forge package",
