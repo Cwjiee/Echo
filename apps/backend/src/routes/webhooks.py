@@ -3,7 +3,7 @@
 import hashlib
 import hmac
 import json
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request, status
 
@@ -42,7 +42,7 @@ async def receive_github_webhook(
     background_tasks: BackgroundTasks,
     x_hub_signature_256: Annotated[str | None, Header()] = None,
     x_github_event: Annotated[str | None, Header()] = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Ingests raw GitHub webhook payloads.
 
@@ -55,7 +55,7 @@ async def receive_github_webhook(
     _verify_signature(body, x_hub_signature_256)
 
     event_type = x_github_event or "unknown"
-    payload: dict = json.loads(body)
+    payload: dict[str, Any] = json.loads(body)
 
     # Fire-and-forget: orchestrate the full pipeline
     background_tasks.add_task(process_github_event, event_type, payload)

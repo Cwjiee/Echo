@@ -1,6 +1,7 @@
 """Echo Backend — FastAPI + Socket.IO entry point."""
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import socketio
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup / shutdown hooks."""
     logger.info("[echo] Backend starting up (env=%s)", settings.app_env)
 

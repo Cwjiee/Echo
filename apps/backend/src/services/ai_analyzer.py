@@ -146,6 +146,7 @@ def _build_result(
 
 
 def _extract_push_context(payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract meaningful data from a 'push' event."""
     commits = payload.get("commits", [])
     repo = payload.get("repository", {})
     return {
@@ -162,6 +163,7 @@ def _extract_push_context(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _extract_pr_context(payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract meaningful data from a 'pull_request' event."""
     pr = payload.get("pull_request", {})
     repo = payload.get("repository", {})
     return {

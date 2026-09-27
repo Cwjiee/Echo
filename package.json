@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "turbo run build",
+    "setup:backend": "npm run setup --workspace=@echo/backend",
     "dev": "turbo run dev --parallel",
     "dev:backend": "turbo run dev --filter=@echo/backend",
     "dev:bot": "turbo run dev --filter=@echo/bot",
@@ -16,7 +17,6 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "type-check": "turbo run type-check",
-    "postinstall": "node ./node_modules/electron/install.js",
     "docker:up": "docker compose -f apps/backend/docker-compose.yml up -d postgres redis",
     "docker:up:all": "docker compose -f apps/backend/docker-compose.yml up -d",
     "docker:down": "docker compose -f apps/backend/docker-compose.yml down"

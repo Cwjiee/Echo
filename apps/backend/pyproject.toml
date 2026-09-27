@@ -9,8 +9,10 @@ ignore = ["E501"]
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
+# python-socketio ships no stubs, so @sio.event is an untyped decorator.
 disallow_untyped_decorators = false
-disallow_any_generics = false
+disallow_any_generics = true
+disallow_untyped_defs = true
 check_untyped_defs = true
 
 

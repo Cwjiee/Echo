@@ -124,9 +124,17 @@ function connect(): void {
 
   wsClient.on('approved_resolution', (payload) => {
     showNotification('Echo Agent', `Executing: ${payload.actions.join(', ')}`);
-    void executeResolution(payload).then((results) => {
-      wsClient?.sendApprovalResponse(payload.action_id, results);
-    });
+    // apply() converts an action that throws into an ENGINE_ERROR result, but a
+    // failure before the snapshot still rejects. Without this catch the backend
+    // never hears, and the Discord thread waits forever on step 12.
+    void executeResolution(payload)
+      .then((result) => {
+        wsClient?.sendApprovalResponse(payload.action_id, result.results);
+      })
+      .catch((error: unknown) => {
+        console.error(`[executor] ${payload.action_id} failed before execution:`, error);
+        wsClient?.sendApprovalResponse(payload.action_id, []);
+      });
   });
 
   wsClient.connect();
