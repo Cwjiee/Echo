@@ -67,8 +67,17 @@ async def receive_github_webhook(
 async def _process_event(event_type: str, payload: dict) -> None:
     """Background task: run AI analysis and broadcast result over WebSocket."""
     print(f"[webhook] Processing event: {event_type}")
-    summary = await analyze_payload(event_type, payload)
+    # analyze_payload now returns a full AnalysisResult dict (Phase 2)
+    analysis_result = await analyze_payload(event_type, payload)
     await broadcast_event(
         "github_event",
-        {"event_type": event_type, "summary": summary, "raw": payload},
+        {
+            "event_type": event_type,
+            "analysis": analysis_result,
+        },
+    )
+    print(
+        f"[webhook] Broadcast complete — action_id={analysis_result.get('action_id')} "
+        f"severity={analysis_result.get('severity')} "
+        f"requires_approval={analysis_result.get('requires_approval')}"
     )
