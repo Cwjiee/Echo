@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;"
+  />
+  <title>Echo</title>
+  <link rel="stylesheet" href="fonts/fonts.css" />
+  <link rel="stylesheet" href="home.css" />
+</head>
+<body data-view="home">
+  <!-- Shared bat artwork. Both states use the same viewBox so they crossfade in place. -->
+  <svg class="sprite" width="0" height="0" aria-hidden="true">
+    <defs>
+      <g id="bat-awake">
+        <g fill="#ccc5b9" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke="#0e0e16">
+          <path d="M151 128 C128 141 102 154 72 171 C66 175 67 181 73 185 L87 195 C91 198 97 197 102 195 L116 190 C121 188 125 191 128 196 C132 203 139 207 146 205 C154 202 160 194 165 184" />
+          <path d="M276 129 C304 143 336 157 377 177 C382 180 381 185 375 187 L357 194 C352 196 348 195 344 193 L333 201 C328 205 323 205 317 202 L300 194 C295 192 292 194 289 199 C285 207 277 210 269 207 C262 204 258 197 255 190" />
+          <path d="M157 119 C161 93 171 71 182 56 C185 52 189 56 192 62 C198 73 201 87 202 104 Z" />
+          <path d="M238 105 C244 87 253 70 261 67 C266 65 269 72 271 80 C275 94 277 111 276 130 Z" />
+          <path d="M214 100 C246 100 273 120 281 148 C287 169 278 194 261 204 C245 214 218 216 192 211 C165 206 148 191 146 168 C143 145 153 122 171 110 C182 103 197 100 214 100 Z" />
+        </g>
+        <ellipse cx="176" cy="144" rx="7" ry="5" fill="#000" />
+        <ellipse cx="239" cy="157" rx="7" ry="6" fill="#000" />
+        <path d="M192 157 C192 169 198 175 206 175 C214 175 220 168 220 158" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" />
+        <g fill="none" stroke-width="8" stroke-linecap="round" stroke="#0e0e16">
+          <path d="M195 212 C195 222 196 229 197 235" />
+          <path d="M235 214 C235 221 236 227 237 232" />
+        </g>
+      </g>
+      <g id="bat-sleeping">
+        <g fill="#ccc5b9" stroke="#0e0e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M164 129 C167 101 176 77 187 62 C190 58 194 63 197 69 C202 81 204 96 204 111 Z" />
+          <path d="M239 111 C245 91 254 74 263 71 C268 70 270 77 272 84 C275 99 277 115 275 132 Z" />
+          <path d="M217 107 C250 107 275 126 282 153 C289 180 279 208 259 221 C241 233 210 235 184 227 C159 219 145 201 145 176 C145 151 155 129 174 117 C185 110 200 107 217 107 Z" />
+        </g>
+        <g fill="none" stroke="#000" stroke-width="7" stroke-linecap="round">
+          <path d="M176 151 C181 156 187 156 192 151" />
+          <path d="M237 151 C242 156 248 156 253 151" />
+        </g>
+        <g fill="#ccc5b9" stroke="#0e0e16" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M151 137 C170 140 190 149 205 161 C222 174 231 190 232 207 L234 226 C235 234 226 239 217 234 L195 225 C190 222 186 223 182 228 L173 237 C168 242 161 239 159 232 L154 219 C152 214 148 211 143 212 L128 214 C121 215 117 210 120 203 C126 183 136 157 151 137 Z" />
+          <path d="M279 137 C261 140 243 149 229 161 C217 172 212 188 212 205 L210 224 C209 232 216 237 223 233 L237 225 C242 222 246 223 250 228 L259 237 C264 242 271 239 273 232 L278 219 C280 214 284 211 289 212 L304 214 C311 215 315 210 312 203 C306 183 295 157 279 137 Z" />
+        </g>
+      </g>
+    </defs>
+  </svg>
+
+  <aside class="sidebar">
+    <div class="titlebar-spacer"></div>
+    <div class="sidebar-header">
+      <svg class="sidebar-logo" viewBox="60 45 330 200" aria-label="Echo">
+        <use class="sidebar-bat-awake" href="#bat-awake" />
+        <use class="sidebar-bat-sleeping" href="#bat-sleeping" />
+      </svg>
+      <button class="icon-btn" id="collapseBtn" aria-label="Collapse sidebar" aria-expanded="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
+          <path d="M6 2.5v11" />
+        </svg>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item" id="homeBtn" aria-current="page" title="Home">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+          <path d="M2.5 7 8 2.5 13.5 7v6.5h-4v-4h-3v4h-4Z" />
+        </svg>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" id="activityBtn" title="Activity" aria-expanded="false" aria-controls="sessionList">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1.5 8h3l2-5 3 10 2-5h3" />
+        </svg>
+        <span class="nav-label">Activity</span>
+        <svg class="chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m4.5 2.5 3.5 3.5-3.5 3.5" />
+        </svg>
+      </button>
+      <div class="sessions" id="sessionList"></div>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <canvas class="echo-field" id="echoField" aria-hidden="true"></canvas>
+    <div class="titlebar-spacer"></div>
+
+    <section class="view home active" id="view-home">
+      <div class="hero">
+        <div class="bat" aria-hidden="true">
+          <svg class="bat-sleeping" viewBox="60 45 330 200"><use href="#bat-sleeping" /></svg>
+          <svg class="bat-awake" viewBox="60 45 330 200"><use href="#bat-awake" /></svg>
+        </div>
+        <div class="hero-text">
+          <h1 class="wordmark">ECHO</h1>
+          <p class="hero-tagline" id="heroTagline">Start your local agent to run tasks</p>
+        </div>
+      </div>
+
+      <button class="toggle" id="toggleBtn">START</button>
+
+      <button class="command" id="command" aria-live="polite" title="Open session">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="command-label">Running</span>
+        <code id="commandText"></code>
+        <svg class="arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m4.5 2.5 3.5 3.5-3.5 3.5" />
+        </svg>
+      </button>
+
+    </section>
+
+    <section class="view session-view" id="view-session" aria-live="polite"></section>
+  </main>
+
+  <!-- Placeholder data for design review. Remove once real sessions are wired in. -->
+  <script src="mock-sessions.js"></script>
+  <script src="home.js"></script>
+</body>
+</html>

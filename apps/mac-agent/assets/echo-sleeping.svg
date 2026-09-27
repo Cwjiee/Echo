@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="444" height="313" viewBox="0 0 444 313" fill="none">
+  <title>Echo bat (sleeping)</title>
+  <desc>A sleeping hand-drawn bat with its wings wrapped around its body.</desc>
+
+  <!-- Ears -->
+  <path
+    d="M164 129
+       C167 101 176 77 187 62
+       C190 58 194 63 197 69
+       C202 81 204 96 204 111
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+  <path
+    d="M239 111
+       C245 91 254 74 263 71
+       C268 70 270 77 272 84
+       C275 99 277 115 275 132
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Body -->
+  <path
+    d="M217 107
+       C250 107 275 126 282 153
+       C289 180 279 208 259 221
+       C241 233 210 235 184 227
+       C159 219 145 201 145 176
+       C145 151 155 129 174 117
+       C185 110 200 107 217 107
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Sleeping face -->
+  <path
+    d="M176 151 C181 156 187 156 192 151"
+    style="fill:none;stroke:#000000;stroke-width:7;stroke-linecap:round"
+  />
+  <path
+    d="M237 151 C242 156 248 156 253 151"
+    style="fill:none;stroke:#000000;stroke-width:7;stroke-linecap:round"
+  />
+
+  <!-- Left wing wrapped across the body -->
+  <path
+    d="M151 137
+       C170 140 190 149 205 161
+       C222 174 231 190 232 207
+       L234 226
+       C235 234 226 239 217 234
+       L195 225
+       C190 222 186 223 182 228
+       L173 237
+       C168 242 161 239 159 232
+       L154 219
+       C152 214 148 211 143 212
+       L128 214
+       C121 215 117 210 120 203
+       C126 183 136 157 151 137
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+  <!-- Right wing wrapped across the body -->
+  <path
+    d="M279 137
+       C261 140 243 149 229 161
+       C217 172 212 188 212 205
+       L210 224
+       C209 232 216 237 223 233
+       L237 225
+       C242 222 246 223 250 228
+       L259 237
+       C264 242 271 239 273 232
+       L278 219
+       C280 214 284 211 289 212
+       L304 214
+       C311 215 315 210 312 203
+       C306 183 295 157 279 137
+       Z"
+    style="fill:#ccc5b9;stroke:#000000;stroke-width:8;stroke-linecap:round;stroke-linejoin:round"
+  />
+
+</svg>

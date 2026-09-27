@@ -30,6 +30,7 @@ app.dock?.hide();
 
 // ── Global references ──────────────────────────────────────────────────────
 let tray: Tray | null = null;
+let homeWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let wsClient: EchoWebSocketClient | null = null;
 let isConnected = false;
@@ -65,19 +66,16 @@ function initTray(): void {
     tray.setTitle('⚡ Echo');
   }
   tray.setToolTip('Echo Agent');
-  tray.on('click', () => {
-    openSettings();
-  });
-  updateTrayMenu();
+  // Left click opens the Echo window; right click keeps the quick menu.
+  tray.on('click', openHome);
+  tray.on('right-click', () => tray?.popUpContextMenu(buildTrayMenu()));
 }
 
-function updateTrayMenu(): void {
-  if (!tray) return;
-
+function buildTrayMenu(): Menu {
   const statusLabel = isConnected ? '🟢 Connected' : '🔴 Disconnected';
   const connectLabel = isConnected ? 'Disconnect' : 'Connect to Server';
 
-  const contextMenu = Menu.buildFromTemplate([
+  return Menu.buildFromTemplate([
     { label: 'Echo Agent', enabled: false },
     { label: statusLabel, enabled: false },
     { type: 'separator' },
@@ -86,14 +84,16 @@ function updateTrayMenu(): void {
       click: () => (isConnected ? disconnect() : connect()),
     },
     {
+      label: 'Open Echo',
+      click: openHome,
+    },
+    {
       label: '⚙️  Settings',
       click: openSettings,
     },
     { type: 'separator' },
     { label: 'Quit Echo Agent', role: 'quit' },
   ]);
-
-  tray.setContextMenu(contextMenu);
 }
 
 // ── Connection management ──────────────────────────────────────────────────
@@ -112,14 +112,12 @@ function connect(): void {
 
   wsClient.on('connected', () => {
     isConnected = true;
-    updateTrayMenu();
     showNotification('Echo Agent', 'Connected to backend server.');
     settingsWindow?.webContents.send('agent:status', '🟢 Connected');
   });
 
   wsClient.on('disconnected', () => {
     isConnected = false;
-    updateTrayMenu();
     settingsWindow?.webContents.send('agent:status', '🔴 Disconnected');
   });
 
@@ -137,7 +135,40 @@ function disconnect(): void {
   wsClient?.disconnect();
   wsClient = null;
   isConnected = false;
-  updateTrayMenu();
+}
+
+// ── Home Window ────────────────────────────────────────────────────────────
+
+function openHome(): void {
+  if (homeWindow) {
+    homeWindow.show();
+    homeWindow.focus();
+    return;
+  }
+
+  homeWindow = new BrowserWindow({
+    width: 840,
+    height: 560,
+    minWidth: 560,
+    minHeight: 420,
+    title: 'Echo',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 16, y: 14 },
+    backgroundColor: '#1f1f2d',
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  homeWindow.loadFile(path.join(__dirname, '../renderer/home.html'));
+  homeWindow.once('ready-to-show', () => homeWindow?.show());
+
+  homeWindow.on('closed', () => {
+    homeWindow = null;
+  });
 }
 
 // ── Settings Window ────────────────────────────────────────────────────────
