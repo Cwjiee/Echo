@@ -42,6 +42,8 @@ app.whenReady().then(() => {
 
   if (store.get('autoConnect') && store.get('authToken')) {
     connect();
+  } else {
+    openSettings();
   }
 });
 
@@ -55,8 +57,17 @@ app.on('window-all-closed', () => {
 function initTray(): void {
   const iconPath = path.join(__dirname, '../assets/tray-icon.png');
   const icon = nativeImage.createFromPath(iconPath);
-  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
+  if (!icon.isEmpty()) {
+    icon.setTemplateImage(true);
+    tray = new Tray(icon);
+  } else {
+    tray = new Tray(nativeImage.createEmpty());
+    tray.setTitle('⚡ Echo');
+  }
   tray.setToolTip('Echo Agent');
+  tray.on('click', () => {
+    openSettings();
+  });
   updateTrayMenu();
 }
 
