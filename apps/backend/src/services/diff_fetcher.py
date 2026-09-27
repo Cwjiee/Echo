@@ -14,7 +14,6 @@ Required (optional but strongly recommended):
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 import httpx
@@ -26,7 +25,8 @@ _DIFF_TRUNCATE_CHARS = 12_000   # Keep prompt under model context limit
 
 
 def _headers() -> dict[str, str]:
-    token = os.getenv("GITHUB_TOKEN")
+    from src.config import get_settings
+    token = get_settings().github_token
     h = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     if token:
         h["Authorization"] = f"Bearer {token}"

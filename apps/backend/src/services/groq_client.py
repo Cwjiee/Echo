@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from functools import cached_property
 from typing import Any
 
@@ -44,8 +43,16 @@ class GroqClient:
         api_key: str | None = None,
         model: str | None = None,
     ) -> None:
-        self._api_key = api_key or os.environ["GROQ_API_KEY"]
-        self._model = model or os.getenv("GROQ_MODEL", _DEFAULT_MODEL)
+        from src.config import get_settings
+        settings = get_settings()
+        resolved_key = api_key or settings.groq_api_key
+        if not resolved_key:
+            raise RuntimeError(
+                "GROQ_API_KEY is not set. Add it to your .env file.\n"
+                "Get a free key at https://console.groq.com/keys"
+            )
+        self._api_key = resolved_key
+        self._model = model or settings.groq_model
 
     @cached_property
     def _sdk(self) -> Groq:
