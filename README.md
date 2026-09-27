@@ -40,8 +40,13 @@ echo/
 
 ```bash
 npm install
-pip install -r apps/backend/requirements.txt
+npm run setup:backend
 ```
+
+`setup:backend` creates `apps/backend/.venv` and installs the Python
+dependencies into it. It needs a Python 3.12+ interpreter, or `uv`, on PATH.
+The backend's `dev`, `start`, `lint`, and `type-check` scripts create the venv
+on first use, so running this by hand is optional.
 
 ### 2. Start infrastructure (Postgres + Redis)
 
@@ -104,9 +109,11 @@ Exposes as both an importable library and a standalone MCP server:
 |---|---|
 | `git_status` | `git status --porcelain` |
 | `git_fetch` | `git fetch <remote>` |
-| `git_pull` | `git pull <remote> <branch>` |
-| `npm_install` | `npm install` |
-| `run_tests` | `npm test` |
+| `git_pull` | `git pull --no-rebase <remote> <branch>` |
+| `git_rebase` | `git rebase <remote>/<branch>` |
+| `apply_patch` | `git apply --3way` then commit |
+| `install_deps` | Installs with the package manager the lockfile selects |
+| `run_tests` | Runs the detected suite, or skips when the project has none |
 
 ## Cloud Deployment
 
