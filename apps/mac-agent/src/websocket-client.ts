@@ -16,8 +16,8 @@ import type { ApplyRequest } from '@echo/local-executor';
 
 interface WebSocketClientOptions {
   url: string;
-  token: string;
-  workspace: string;
+  token?: string;
+  workspace?: string;
 }
 
 export class EchoWebSocketClient extends EventEmitter {
@@ -32,8 +32,8 @@ export class EchoWebSocketClient extends EventEmitter {
   connect(): void {
     this.socket = io(this.options.url, {
       auth: {
-        token: this.options.token,
-        workspace: this.options.workspace,
+        token: this.options.token || process.env.AGENT_TOKEN || '',
+        workspace: this.options.workspace || process.env.WORKSPACE || 'default',
       },
       transports: ['websocket'],
       reconnection: true,

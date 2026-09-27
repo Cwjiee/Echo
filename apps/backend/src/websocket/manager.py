@@ -54,14 +54,11 @@ async def connect(sid: str, environ: dict[str, Any], auth: dict[str, Any] | None
     token = (auth or {}).get("token", "")
     workspace = (auth or {}).get("workspace", "default")
 
-    if not token:
-        logger.warning("[ws] Rejected unauthenticated connection: sid=%s", sid)
-        return False  # Reject connection
-
     valid_tokens = settings.valid_agent_tokens
-    if valid_tokens and token not in valid_tokens:
-        logger.warning("[ws] Rejected connection with invalid token: sid=%s", sid)
-        return False
+    if valid_tokens:
+        if not token or token not in valid_tokens:
+            logger.warning("[ws] Rejected connection with invalid token: sid=%s", sid)
+            return False
 
     _connected_agents[sid] = {"workspace": workspace, "token": token}
     await sio.enter_room(sid, workspace)  # Group agents by workspace

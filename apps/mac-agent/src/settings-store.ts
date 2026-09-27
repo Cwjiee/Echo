@@ -4,15 +4,11 @@ import fs from 'fs';
 
 export interface SettingsSchema {
   backendUrl: string;
-  authToken: string;
-  workspace: string;
   autoConnect: boolean;
 }
 
 const DEFAULT_SETTINGS: SettingsSchema = {
-  backendUrl: 'http://localhost:8000',
-  authToken: '',
-  workspace: 'default',
+  backendUrl: process.env.BACKEND_URL || 'http://localhost:8000',
   autoConnect: false,
 };
 

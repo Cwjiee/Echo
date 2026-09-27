@@ -9,6 +9,7 @@
  */
 
 import path from 'path';
+import dotenv from 'dotenv';
 import {
   app,
   BrowserWindow,
@@ -18,10 +19,20 @@ import {
   Notification,
   Tray,
 } from 'electron';
+
+// Load .env files: local mac-agent .env, fallback to root .env
+dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
+dotenv.config();
+
 import { store } from './settings-store';
 import { EchoWebSocketClient } from './websocket-client';
 import { executeResolution } from './executor-bridge';
 import type { ApplyRequest } from '@echo/local-executor';
+
+// action_id → local head_sha recorded at inspect time (CONTRACT step 4).
+// Keyed by action_id; entry is read once when approved_resolution arrives.
+const inspectCache = new Map<string, string>();
 
 // ── App Configuration ──────────────────────────────────────────────────────
 app.setName('echo-mac-agent');
@@ -32,9 +43,27 @@ app.dock?.hide();
 // ── Global references ──────────────────────────────────────────────────────
 let tray: Tray | null = null;
 let homeWindow: BrowserWindow | null = null;
-let settingsWindow: BrowserWindow | null = null;
 let wsClient: EchoWebSocketClient | null = null;
 let isConnected = false;
+
+// In-memory session list pushed to the home renderer.
+interface Session {
+  id: string;
+  title: string;
+  repo: string;
+  branch: string;
+  status: 'running' | 'done' | 'failed';
+  started: string;
+  approvedBy: string;
+  group: string;
+  age: string;
+  log: Array<{ cmd?: string; status?: string; output?: string; ms?: number; note?: string; summary?: string; failed?: boolean }>;
+}
+const sessions: Session[] = [];
+
+function pushSessions(): void {
+  homeWindow?.webContents.send('agent:sessions', sessions);
+}
 
 // ── App ready ──────────────────────────────────────────────────────────────
 
@@ -43,7 +72,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   openHome();
 
-  if (store.get('autoConnect') && store.get('authToken')) {
+  if (store.get('autoConnect')) {
     connect();
   }
 });
@@ -87,10 +116,6 @@ function buildTrayMenu(): Menu {
       label: 'Open Echo',
       click: openHome,
     },
-    {
-      label: '⚙️  Settings',
-      click: openSettings,
-    },
     { type: 'separator' },
     { label: 'Quit Echo Agent', role: 'quit' },
   ]);
@@ -99,14 +124,9 @@ function buildTrayMenu(): Menu {
 // ── Connection management ──────────────────────────────────────────────────
 
 function connect(): void {
-  const backendUrl = store.get('backendUrl');
-  const authToken = store.get('authToken');
-  const workspace = store.get('workspace');
-
-  if (!authToken) {
-    openSettings();
-    return;
-  }
+  const backendUrl = process.env.BACKEND_URL || store.get('backendUrl') || 'http://localhost:8000';
+  const authToken = process.env.AGENT_TOKEN || '';
+  const workspace = process.env.WORKSPACE || 'default';
 
   wsClient = new EchoWebSocketClient({ url: backendUrl, token: authToken, workspace });
 
@@ -114,18 +134,26 @@ function connect(): void {
     isConnected = true;
     showNotification('Echo Agent', 'Connected to backend server.');
     homeWindow?.webContents.send('agent:status', '🟢 Connected');
-    settingsWindow?.webContents.send('agent:status', '🟢 Connected');
   });
 
   wsClient.on('disconnected', () => {
     isConnected = false;
     homeWindow?.webContents.send('agent:status', '🔴 Disconnected');
-    settingsWindow?.webContents.send('agent:status', '🔴 Disconnected');
+  });
+
+  // CONTRACT step 4: run inspect() as soon as the analysis arrives so that
+  // head_sha is ready (and fresh) by the time the developer approves.
+  wsClient.on('github_event', (data: { event_type: string; analysis: { action_id: string; context?: { repository?: string } } }) => {
+    const { action_id, context } = data.analysis ?? {};
+    const repository = context?.repository ?? '';
+    if (action_id && repository) {
+      void runInspect(action_id, repository);
+    }
   });
 
   wsClient.on('approved_resolution', (payload) => {
     showNotification('Echo Agent', `Executing: ${payload.actions.join(', ')}`);
-    void runInspectThenApply(payload);
+    void runApply(payload);
   });
 
   wsClient.connect();
@@ -164,37 +192,15 @@ function openHome(): void {
   });
 
   homeWindow.loadFile(path.join(__dirname, '../renderer/home.html'));
-  homeWindow.once('ready-to-show', () => homeWindow?.show());
+  homeWindow.once('ready-to-show', () => {
+    homeWindow?.show();
+    // Sync current state into the freshly loaded renderer.
+    homeWindow?.webContents.send('agent:status', isConnected ? '🟢 Connected' : '🔴 Disconnected');
+    pushSessions();
+  });
 
   homeWindow.on('closed', () => {
     homeWindow = null;
-  });
-}
-
-// ── Settings Window ────────────────────────────────────────────────────────
-
-function openSettings(): void {
-  if (settingsWindow) {
-    settingsWindow.focus();
-    return;
-  }
-
-  settingsWindow = new BrowserWindow({
-    width: 480,
-    height: 420,
-    title: 'Echo Agent Settings',
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  settingsWindow.loadFile(path.join(__dirname, '../renderer/settings.html'));
-
-  settingsWindow.on('closed', () => {
-    settingsWindow = null;
   });
 }
 
@@ -202,18 +208,16 @@ function openSettings(): void {
 
 function registerIpcHandlers(): void {
   ipcMain.handle('settings:get', () => ({
-    backendUrl: store.get('backendUrl'),
-    authToken: store.get('authToken'),
-    workspace: store.get('workspace'),
+    backendUrl: process.env.BACKEND_URL || store.get('backendUrl') || 'http://localhost:8000',
     autoConnect: store.get('autoConnect'),
   }));
 
   ipcMain.handle('settings:save', (_event, settings: Record<string, unknown>) => {
     if (typeof settings['backendUrl'] === 'string') store.set('backendUrl', settings['backendUrl']);
-    if (typeof settings['authToken'] === 'string') store.set('authToken', settings['authToken']);
-    if (typeof settings['workspace'] === 'string') store.set('workspace', settings['workspace']);
     if (typeof settings['autoConnect'] === 'boolean') store.set('autoConnect', settings['autoConnect']);
   });
+
+  ipcMain.handle('agent:connection-state', () => isConnected);
 
   ipcMain.on('agent:connect', () => connect());
   ipcMain.on('agent:disconnect', () => disconnect());
@@ -227,54 +231,104 @@ function showNotification(title: string, body: string): void {
   }
 }
 
-// ── Inspect → Apply pipeline ───────────────────────────────────────────────
+// ── Inspect → Apply pipeline (CONTRACT steps 4 & 7) ───────────────────────
 //
-// Flow:
-//   1. Receive approved_resolution (ApplyRequest with empty base_sha)
-//   2. Run inspect() locally to get the real HEAD SHA
-//   3. Emit inspect_report to backend — backend stores head_sha on PendingAction
-//   4. Wait for inspect_ack from backend (confirms sha was recorded)
-//   5. Execute apply() with the full payload (base_sha now set server-side;
-//      the backend re-emits approved_resolution with it populated if needed,
-//      but for the initial impl we patch it in locally from the InspectReport)
-//   6. Send approval_response with results
+// Step 4 (on github_event): run inspect() immediately, cache head_sha locally.
+// Step 7 (on approved_resolution): read cached sha, call apply().
+//
+// This keeps inspect off the critical approval path so apply() runs without
+// a blocking git fetch after the developer has already waited for the AI summary.
 
-async function runInspectThenApply(payload: ApplyRequest): Promise<void> {
+async function runInspect(actionId: string, repository: string): Promise<void> {
   const { inspect } = await import('@echo/local-executor');
+  try {
+    const report = await inspect({
+      protocol_version: 1,
+      request_id: actionId,
+      repository,
+    });
+    inspectCache.set(actionId, report.head_sha);
+    console.log(`[inspector] cached head_sha=${report.head_sha} for action_id=${actionId}`);
+  } catch (err) {
+    console.error(`[inspector] inspect() failed for ${repository}:`, err);
+    // Cache empty string so runApply knows inspect was attempted but failed.
+    inspectCache.set(actionId, '');
+  }
+}
 
-  let headSha = payload.base_sha;
+async function runApply(payload: ApplyRequest): Promise<void> {
+  const actionId = payload.action_id;
+  const repo = payload.repository;
+  const now = new Date();
 
-  // If backend didn't supply base_sha yet, run inspect() to get it locally.
-  if (!headSha) {
-    try {
-      const report = await inspect({
-        protocol_version: payload.protocol_version,
-        request_id: payload.action_id,
-        repository: payload.repository,
-        workdir: payload.context?.workdir,
-      });
-      headSha = report.head_sha;
+  // Create a running session entry immediately so the UI updates.
+  const session: Session = {
+    id: actionId,
+    title: `Sync ${repo.split('/')[1] ?? repo}`,
+    repo,
+    branch: payload.context?.branch ?? 'main',
+    status: 'running',
+    started: now.toLocaleTimeString(),
+    approvedBy: (payload.context as Record<string, string> | undefined)?.approved_by ?? 'discord',
+    group: now.toLocaleDateString(),
+    age: 'just now',
+    log: [{ note: `Starting sync for ${repo}` }],
+  };
+  sessions.unshift(session);
+  pushSessions();
 
-      // Tell the backend so it can record it and use it for future re-approvals.
-      wsClient?.sendInspectReport(payload.action_id, payload.repository, headSha);
-      console.log(`[inspector] ${payload.action_id} head_sha=${headSha}`);
-    } catch (err) {
-      console.error(`[inspector] inspect() failed for ${payload.repository}:`, err);
-      // Can't get a valid base_sha — report failure immediately rather than
-      // letting apply() reject with an unhelpful STALE_STATE.
-      wsClient?.sendApprovalResponse(payload.action_id, []);
-      return;
-    }
+  // Read head_sha from cache. If inspect hasn't finished yet, run it now.
+  let headSha = inspectCache.get(actionId);
+  if (headSha === undefined) {
+    console.warn(`[executor] head_sha not cached yet for ${actionId}, running inspect now`);
+    await runInspect(actionId, repo);
+    headSha = inspectCache.get(actionId) ?? '';
   }
 
-  // Patch base_sha into the payload before handing to apply().
+  if (!headSha) {
+    console.error(`[executor] no valid head_sha for ${actionId} — aborting`);
+    session.status = 'failed';
+    session.log.push({ summary: 'Could not resolve local repository HEAD. Check ~/.echo/config.json', failed: true });
+    pushSessions();
+    wsClient?.sendApprovalResponse(actionId, []);
+    inspectCache.delete(actionId);
+    return;
+  }
+
+  inspectCache.delete(actionId); // consume — idempotency cache in apply() handles replays
+
   const fullPayload: ApplyRequest = { ...payload, base_sha: headSha };
 
   try {
     const result = await executeResolution(fullPayload);
-    wsClient?.sendApprovalResponse(payload.action_id, result.results);
+
+    // Update session log from execution results.
+    session.log = result.results.map((r) => ({
+      cmd: r.action,
+      status: r.success ? 'done' : 'failed',
+      output: [r.stdout, r.stderr].filter(Boolean).join('\n').trim() || undefined,
+      ms: r.durationMs,
+    }));
+
+    if (result.rolled_back) {
+      session.log.push({ note: '⚠️ Changes rolled back due to failure.' });
+    }
+    if (result.stash_retained) {
+      session.log.push({ note: `⚠️ Stash retained: ${result.stash_retained.reason}` });
+    }
+
+    session.status = result.status === 'success' ? 'done' : 'failed';
+    if (result.error) {
+      session.log.push({ summary: `Error: ${result.error}${result.error_detail ? ` — ${result.error_detail}` : ''}`, failed: true });
+    }
+    pushSessions();
+
+    wsClient?.sendApprovalResponse(actionId, result.results);
   } catch (error: unknown) {
-    console.error(`[executor] ${payload.action_id} failed before execution:`, error);
-    wsClient?.sendApprovalResponse(payload.action_id, []);
+    console.error(`[executor] ${actionId} failed before execution:`, error);
+    session.status = 'failed';
+    session.log.push({ summary: String(error), failed: true });
+    pushSessions();
+    wsClient?.sendApprovalResponse(actionId, []);
   }
 }

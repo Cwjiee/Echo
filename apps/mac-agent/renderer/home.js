@@ -362,4 +362,30 @@ window.echoUI = {
   onToggle: (fn) => toggleHandlers.push(fn),
 };
 
-setSessions(window.MOCK_SESSIONS ?? []);
+// ── Wire to Electron main process via echoAPI ─────────────────────────
+if (window.echoAPI) {
+  // START / STOP button → connect / disconnect
+  window.echoUI.onToggle((listening) => {
+    if (listening) window.echoAPI.connect();
+    else window.echoAPI.disconnect();
+  });
+
+  // Connection status → reflect in UI
+  window.echoAPI.onStatusChange((status) => {
+    const connected = status.includes('Connected') && !status.includes('Dis');
+    window.echoUI.setListening(connected);
+  });
+
+  // Session updates from main process → Activity view
+  window.echoAPI.onSessionsChange((list) => {
+    setSessions(list);
+  });
+
+  // Sync state on load
+  window.echoAPI.getConnectionState().then((connected) => {
+    window.echoUI.setListening(connected);
+  });
+} else {
+  // Dev / no-Electron fallback: show mock data
+  setSessions(window.MOCK_SESSIONS ?? []);
+}
