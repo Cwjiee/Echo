@@ -7,12 +7,12 @@
  * Emits typed local events:
  *  - 'connected'
  *  - 'disconnected' (reason: string)
- *  - 'approved_resolution' → ApprovedResolutionPayload
+ *  - 'approved_resolution' → ApplyRequest
  */
 
 import { EventEmitter } from 'events';
 import { io, type Socket } from 'socket.io-client';
-import type { ApprovedResolutionPayload } from '@echo/local-executor';
+import type { ApplyRequest } from '@echo/local-executor';
 
 interface WebSocketClientOptions {
   url: string;
@@ -51,7 +51,7 @@ export class EchoWebSocketClient extends EventEmitter {
       this.emit('disconnected', reason);
     });
 
-    this.socket.on('approved_resolution', (payload: ApprovedResolutionPayload) => {
+    this.socket.on('approved_resolution', (payload: ApplyRequest) => {
       console.log('[mac-agent:ws] Received approved_resolution:', payload);
       this.emit('approved_resolution', payload);
     });
