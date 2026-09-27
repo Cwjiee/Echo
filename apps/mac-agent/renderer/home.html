@@ -4,293 +4,15 @@
   <meta charset="UTF-8" />
   <meta
     http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:;"
   />
   <title>Echo</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600&family=Lexend+Zetta:wght@700;800&display=swap"
-    rel="stylesheet"
-  />
-  <style>
-    /* ── Tokens: "Midnight Sky Blues" ─────────────────────────────────────── */
-    :root {
-      --ink: #1f1f2d;    /* window background */
-      --slate: #333f4c;  /* raised surfaces */
-      --dusk: #3d4051;   /* borders, hover */
-      --haze: #5d5e76;   /* muted text */
-      --sage: #59747b;   /* accent, echo ripples */
-      --fur: #ccc5b9;    /* primary text, bat body */
-
-      --sidebar-bg: #1a1a26;
-      --font-display: 'Lexend Zetta', sans-serif;
-      --font-body: 'League Spartan', -apple-system, sans-serif;
-      --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
-
-      --sidebar-w: 200px;
-      --sidebar-w-collapsed: 64px;
-      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body { height: 100%; }
-
-    body {
-      display: flex;
-      background: var(--ink);
-      color: var(--fur);
-      font-family: var(--font-body);
-      font-size: 15px;
-      overflow: hidden;
-      user-select: none;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-    :focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
-
-    /* ── Sidebar ──────────────────────────────────────────────────────────── */
-    .sidebar {
-      width: var(--sidebar-w);
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 0 10px 12px;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--dusk);
-      transition: width 220ms var(--ease-out);
-    }
-
-    /* Space for the macOS traffic lights; also the window drag handle. */
-    .titlebar-spacer { height: 38px; flex-shrink: 0; -webkit-app-region: drag; }
-
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 36px;
-      padding: 0 4px 0 6px;
-      margin-bottom: 14px;
-    }
-
-    .sidebar-logo { width: 38px; height: 24px; flex-shrink: 0; }
-
-    .icon-btn {
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      color: var(--haze);
-      transition: color 150ms ease, background-color 150ms ease;
-    }
-    .icon-btn:hover { color: var(--fur); background: var(--dusk); }
-    .icon-btn svg { width: 16px; height: 16px; }
-
-    .nav { display: flex; flex-direction: column; gap: 2px; }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      height: 38px;
-      padding: 0 12px;
-      border-radius: 8px;
-      color: var(--haze);
-      font-size: 15px;
-      font-weight: 500;
-      text-align: left;
-      white-space: nowrap;
-      overflow: hidden;
-      transition: color 150ms ease, background-color 150ms ease;
-    }
-    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-    .nav-item:hover { color: var(--fur); background: rgba(61, 64, 81, 0.5); }
-    .nav-item[aria-current='page'] { color: var(--fur); background: var(--slate); }
-
-    /* Collapsed: icon-only rail, with the logo stacked above the toggle. */
-    body.collapsed .sidebar { width: var(--sidebar-w-collapsed); }
-    body.collapsed .sidebar-header {
-      flex-direction: column;
-      justify-content: center;
-      gap: 10px;
-      height: auto;
-      padding: 0;
-    }
-    body.collapsed .nav-label { display: none; }
-    body.collapsed .nav-item { justify-content: center; padding: 0; }
-
-    /* ── Main pane ────────────────────────────────────────────────────────── */
-    .main {
-      position: relative;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .main .titlebar-spacer { position: absolute; inset: 0 0 auto 0; }
-
-    .view { flex: 1; display: none; }
-    .view.active { display: flex; }
-
-    .home {
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 36px;
-      padding: 40px 32px 56px;
-    }
-
-    .hero {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      isolation: isolate;
-    }
-
-    .bat {
-      position: relative;
-      width: 148px;
-      height: 90px;
-      flex-shrink: 0;
-    }
-    /* Hover in place while listening, like a bat treading air. */
-    body.listening .bat { animation: float 3.2s ease-in-out infinite; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-7px); }
-    }
-    .bat svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      transition: opacity 280ms ease, transform 380ms var(--ease-out);
-    }
-
-    .bat .bat-awake { opacity: 0; transform: translateY(6px) scale(0.92); }
-    body.listening .bat .bat-awake { opacity: 1; transform: none; }
-    body.listening .bat .bat-sleeping { opacity: 0; transform: translateY(4px) scale(0.96); }
-
-    .wordmark {
-      font-family: var(--font-display);
-      font-weight: 800;
-      font-size: 38px;
-      letter-spacing: 0.04em;
-      line-height: 1;
-    }
-
-    /* ── Echo field: a dot grid that lights up as sonar waves pass through ── */
-    .echo-field {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 500ms ease;
-    }
-    body.listening .echo-field { opacity: 1; }
-    .view { position: relative; z-index: 1; }
-
-    /* ── Start / Stop ─────────────────────────────────────────────────────── */
-    .toggle {
-      width: 240px;
-      height: 48px;
-      border-radius: 10px;
-      font-family: var(--font-display);
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: 0.18em;
-      background: var(--fur);
-      color: var(--ink);
-      border: 1px solid var(--fur);
-      transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease,
-        transform 120ms ease;
-    }
-    .toggle:hover { background: #ddd7cc; }
-    .toggle:active { transform: scale(0.97); }
-
-    body.listening .toggle {
-      background: var(--ink);
-      color: var(--fur);
-      border-color: var(--dusk);
-    }
-    body.listening .toggle:hover { background: #2a2c3c; border-color: var(--haze); }
-
-    /* ── Running command ──────────────────────────────────────────────────── */
-    .command {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      max-width: 100%;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: #262b38;
-      visibility: hidden;
-      opacity: 0;
-      transform: translateY(-4px);
-      transition: opacity 240ms ease, transform 300ms var(--ease-out), visibility 0s 240ms;
-    }
-    body.listening .command {
-      visibility: visible;
-      opacity: 1;
-      transform: none;
-      transition: opacity 240ms ease 120ms, transform 300ms var(--ease-out) 120ms;
-    }
-    .command-label {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--haze);
-    }
-    .command code {
-      font-family: var(--font-mono);
-      font-size: 12.5px;
-      color: var(--fur);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .command code::before { content: '$ '; color: var(--haze); }
-
-    .spinner {
-      width: 12px;
-      height: 12px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 2px solid var(--dusk);
-      border-top-color: var(--sage);
-      animation: spin 0.9s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .footer {
-      position: absolute;
-      bottom: 14px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 12px;
-      color: var(--haze);
-    }
-
-    /* ── Activity (placeholder until we design it) ────────────────────────── */
-    .activity { align-items: center; justify-content: center; color: var(--haze); }
-
-    @media (prefers-reduced-motion: reduce) {
-      body.listening .bat { animation: none; }
-      .spinner { animation-duration: 2.4s; }
-    }
-  </style>
+  <link rel="stylesheet" href="fonts/fonts.css" />
+  <link rel="stylesheet" href="home.css" />
 </head>
-<body>
+<body data-view="home">
   <!-- Shared bat artwork. Both states use the same viewBox so they crossfade in place. -->
-  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <svg class="sprite" width="0" height="0" aria-hidden="true">
     <defs>
       <g id="bat-awake">
         <g fill="#ccc5b9" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke="#0e0e16">
@@ -339,18 +61,22 @@
     </div>
 
     <nav class="nav">
-      <button class="nav-item" data-view="home" aria-current="page" title="Home">
+      <button class="nav-item" id="homeBtn" aria-current="page" title="Home">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
           <path d="M2.5 7 8 2.5 13.5 7v6.5h-4v-4h-3v4h-4Z" />
         </svg>
         <span class="nav-label">Home</span>
       </button>
-      <button class="nav-item" data-view="activity" title="Activity">
+      <button class="nav-item" id="activityBtn" title="Activity" aria-expanded="false" aria-controls="sessionList">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1.5 8h3l2-5 3 10 2-5h3" />
         </svg>
         <span class="nav-label">Activity</span>
+        <svg class="chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m4.5 2.5 3.5 3.5-3.5 3.5" />
+        </svg>
       </button>
+      <div class="sessions" id="sessionList"></div>
     </nav>
   </aside>
 
@@ -369,156 +95,22 @@
 
       <button class="toggle" id="toggleBtn">START</button>
 
-      <div class="command" id="command" aria-live="polite">
+      <button class="command" id="command" aria-live="polite" title="Open session">
         <span class="spinner" aria-hidden="true"></span>
         <span class="command-label">Running</span>
-        <!-- Placeholder until the executor streams real commands in. -->
-        <code id="commandText">git pull --rebase origin main</code>
-      </div>
+        <code id="commandText"></code>
+        <svg class="arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m4.5 2.5 3.5 3.5-3.5 3.5" />
+        </svg>
+      </button>
 
-      <p class="footer">Echo Agent v0.0.1</p>
     </section>
 
-    <section class="view activity" id="view-activity">
-      <p>Activity — coming soon</p>
-    </section>
+    <section class="view session-view" id="view-session" aria-live="polite"></section>
   </main>
 
-  <script>
-    // UI-only state for now; no backend calls are made from this page.
-    const body = document.body;
-    const toggleBtn = document.getElementById('toggleBtn');
-    const collapseBtn = document.getElementById('collapseBtn');
-
-    toggleBtn.addEventListener('click', () => {
-      const listening = body.classList.toggle('listening');
-      toggleBtn.textContent = listening ? 'STOP' : 'START';
-      listening ? echoField.start() : echoField.stop();
-    });
-
-    // ── Echo field ────────────────────────────────────────────────────────
-    // A fixed grid of tiny square dots. Sonar waves expand from the bat and
-    // light up a random subset of the dots they pass, so each ring reads as
-    // scattered sparkle rather than a solid line.
-    const echoField = (() => {
-      const canvas = document.getElementById('echoField');
-      const ctx = canvas.getContext('2d');
-      const main = document.querySelector('.main');
-      const bat = document.querySelector('.bat');
-      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      const SPACING = 14;       // grid pitch, px
-      const DOT = 2;            // dot size, px
-      const SPEED = 120;        // wave speed, px/s
-      const INTERVAL = 1.4;     // seconds between waves
-      const BAND = 16;          // wave thickness, px
-      const DENSITY = 0.45;     // share of dots a wave lights up
-
-      let dots = [];
-      let origin = { x: 0, y: 0 };
-      let maxR = 1;
-      let startedAt = 0;
-      let frame = 0;
-      let running = false;
-
-      const hash = (a, b) => {
-        const x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
-        return x - Math.floor(x);
-      };
-
-      function layout() {
-        const dpr = window.devicePixelRatio || 1;
-        const { width, height } = main.getBoundingClientRect();
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        const m = main.getBoundingClientRect();
-        const b = bat.getBoundingClientRect();
-        origin = { x: b.left - m.left + b.width / 2, y: b.top - m.top + b.height / 2 };
-
-        dots = [];
-        const offX = origin.x % SPACING;
-        const offY = origin.y % SPACING;
-        for (let y = offY; y < height; y += SPACING) {
-          for (let x = offX; x < width; x += SPACING) {
-            dots.push({ x, y, d: Math.hypot(x - origin.x, y - origin.y), id: dots.length });
-          }
-        }
-        maxR = Math.max(...dots.map((d) => d.d));
-        if (!running) draw(reduceMotion ? 2.2 : 0);
-      }
-
-      function draw(t) {
-        const { width, height } = canvas;
-        ctx.clearRect(0, 0, width, height);
-        const newest = Math.floor(t / INTERVAL);
-        const lifetime = maxR / SPEED;
-
-        for (const dot of dots) {
-          // Faint resting grid, dimming away from the bat.
-          const fade = 1 - dot.d / maxR;
-          let a = 0.05 + 0.05 * fade;
-
-          for (let w = newest; w >= 0 && (t - w * INTERVAL) < lifetime; w--) {
-            const r = (t - w * INTERVAL) * SPEED;
-            const off = (dot.d - r) / BAND;
-            if (off > 1.5 || off < -3) continue;
-            const seed = hash(dot.id, w);
-            if (seed > DENSITY) continue;
-            // Sharp leading edge, softer trail behind it.
-            const band = off > 0 ? Math.exp(-off * off * 2) : Math.exp(off);
-            const strength = (1 - r / maxR) ** 1.4;
-            a += band * strength * (0.6 + 0.4 * (seed / DENSITY));
-          }
-
-          if (a < 0.02) continue;
-          ctx.fillStyle = `rgba(204, 197, 185, ${Math.min(a, 0.9)})`;
-          // The brightest dots render a touch larger, like a glint.
-          const size = a > 0.6 ? DOT + 1 : DOT;
-          ctx.fillRect(dot.x - size / 2, dot.y - size / 2, size, size);
-        }
-      }
-
-      function tick(now) {
-        draw((now - startedAt) / 1000);
-        frame = requestAnimationFrame(tick);
-      }
-
-      new ResizeObserver(layout).observe(main);
-      // The bat moves when the sidebar collapses; re-measure once it settles.
-      main.parentElement.querySelector('.sidebar').addEventListener('transitionend', layout);
-
-      return {
-        start() {
-          running = true;
-          if (reduceMotion) return draw(2.2);
-          startedAt = performance.now();
-          cancelAnimationFrame(frame);
-          frame = requestAnimationFrame(tick);
-        },
-        stop() {
-          running = false;
-          // Let the canvas fade out before the loop stops.
-          setTimeout(() => { if (!running) cancelAnimationFrame(frame); }, 500);
-        },
-      };
-    })();
-
-    collapseBtn.addEventListener('click', () => {
-      const collapsed = body.classList.toggle('collapsed');
-      collapseBtn.setAttribute('aria-expanded', String(!collapsed));
-      collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-    });
-
-    document.querySelectorAll('.nav-item').forEach((item) => {
-      item.addEventListener('click', () => {
-        document.querySelectorAll('.nav-item').forEach((n) => n.removeAttribute('aria-current'));
-        item.setAttribute('aria-current', 'page');
-        document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
-        document.getElementById(`view-${item.dataset.view}`).classList.add('active');
-      });
-    });
-  </script>
+  <!-- Placeholder data for design review. Remove once real sessions are wired in. -->
+  <script src="mock-sessions.js"></script>
+  <script src="home.js"></script>
 </body>
 </html>

@@ -147,8 +147,8 @@ function openHome(): void {
   }
 
   homeWindow = new BrowserWindow({
-    width: 720,
-    height: 480,
+    width: 840,
+    height: 560,
     minWidth: 560,
     minHeight: 420,
     title: 'Echo',
