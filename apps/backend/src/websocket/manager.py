@@ -4,12 +4,19 @@ Socket.IO WebSocket Manager.
 Manages:
   - Authenticated connections from Mac agents
   - Room-based event broadcasting (per developer / workspace)
-  - Approval payload relay
+  - Approval payload relay from the bot to the Mac agent
+  - Execution result relay from the Mac agent back to the bot
 """
 
 from __future__ import annotations
 
+import logging
+
 import socketio
+
+from src.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Server instance
@@ -19,7 +26,7 @@ import socketio
 sio = socketio.AsyncServer(
     async_mode="asgi",
     cors_allowed_origins="*",  # Tighten in production
-    logger=True,
+    logger=False,
     engineio_logger=False,
 )
 
@@ -39,18 +46,25 @@ async def connect(sid: str, environ: dict, auth: dict | None = None) -> bool:
 
     auth = { "token": "<agent-auth-token>", "workspace": "my-project" }
 
-    TODO: Validate token against a database / JWT.
+    The token is validated against the AGENT_AUTH_TOKENS env var.
+    When AGENT_AUTH_TOKENS is empty (local dev), all tokens are accepted.
     """
+    settings = get_settings()
     token = (auth or {}).get("token", "")
     workspace = (auth or {}).get("workspace", "default")
 
     if not token:
-        print(f"[ws] Rejected unauthenticated connection: {sid}")
+        logger.warning("[ws] Rejected unauthenticated connection: sid=%s", sid)
         return False  # Reject connection
+
+    valid_tokens = settings.valid_agent_tokens
+    if valid_tokens and token not in valid_tokens:
+        logger.warning("[ws] Rejected connection with invalid token: sid=%s", sid)
+        return False
 
     _connected_agents[sid] = {"workspace": workspace, "token": token}
     await sio.enter_room(sid, workspace)  # Group agents by workspace
-    print(f"[ws] Agent connected: sid={sid} workspace={workspace}")
+    logger.info("[ws] Agent connected: sid=%s workspace=%s", sid, workspace)
     await sio.emit("connected", {"message": "Echo agent connected", "sid": sid}, to=sid)
     return True
 
@@ -58,7 +72,7 @@ async def connect(sid: str, environ: dict, auth: dict | None = None) -> bool:
 @sio.event
 async def disconnect(sid: str) -> None:
     agent = _connected_agents.pop(sid, {})
-    print(f"[ws] Agent disconnected: sid={sid} was={agent}")
+    logger.info("[ws] Agent disconnected: sid=%s was=%s", sid, agent)
 
 
 # ---------------------------------------------------------------------------
@@ -69,12 +83,39 @@ async def disconnect(sid: str) -> None:
 @sio.event
 async def approval_response(sid: str, data: dict) -> None:
     """
-    Mac agent acknowledges that an 'approved_resolution' was executed.
+    Mac agent reports back the result of executing an approved resolution.
 
     data = { "action_id": "...", "success": true, "output": "..." }
+
+    Flow: Mac agent → backend (here) → update state → notify bot channel.
     """
-    print(f"[ws] Approval response from {sid}: {data}")
-    # TODO: Persist result to database, notify bot channel
+    action_id = data.get("action_id", "")
+    success = bool(data.get("success", False))
+    output = str(data.get("output", ""))
+
+    logger.info(
+        "[ws] Execution result from sid=%s action_id=%s success=%s",
+        sid,
+        action_id,
+        success,
+    )
+
+    # Update state and build the bot notification
+    from src.services.orchestrator import handle_execution_result  # avoid import cycle
+
+    action = await handle_execution_result(action_id, success, output)
+    if action:
+        # Emit an execution_result event so the bot can update the Discord message
+        await sio.emit(
+            "execution_result",
+            {
+                "action_id": action_id,
+                "success": success,
+                "output": output,
+                "repository": action.repository,
+                "workspace": action.workspace,
+            },
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -108,4 +149,18 @@ async def send_approved_resolution(
     """
     payload = {"action_id": action_id, "actions": actions, "context": context}
     await sio.emit("approved_resolution", payload, room=workspace)
-    print(f"[ws] Sent approved_resolution to room '{workspace}': {payload}")
+    logger.info("[ws] Sent approved_resolution to room='%s': action_id=%s", workspace, action_id)
+
+
+# ---------------------------------------------------------------------------
+# Inspection helpers (used by the admin route)
+# ---------------------------------------------------------------------------
+
+
+def get_connected_agents() -> dict[str, dict]:
+    """Return a snapshot of currently connected agents."""
+    return dict(_connected_agents)
+
+
+def get_agent_count() -> int:
+    return len(_connected_agents)
