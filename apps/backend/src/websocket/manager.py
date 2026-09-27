@@ -116,6 +116,38 @@ async def inspect_report(sid: str, data: dict[str, Any]) -> None:
 
 
 @sio.event
+async def bot_approval(sid: str, data: dict[str, Any]) -> None:
+    """
+    Discord bot relays a developer's approval click.
+
+    data = { "action_id": "...", "workspace": "...", "approved_by": "username" }
+
+    Flow: Discord button → bot → backend (here) → handle_approval()
+          → send_approved_resolution() → mac-agent → apply()
+    """
+    action_id = data.get("action_id", "")
+    workspace = data.get("workspace", "")
+    approved_by = data.get("approved_by", "discord-user")
+
+    if not action_id:
+        logger.warning("[ws] bot_approval missing action_id from sid=%s", sid)
+        return
+
+    # Derive workspace from the action's stored state when not provided
+    if not workspace:
+        from src.services.state_manager import get_state_manager
+        action = get_state_manager().get_pending_action(action_id)
+        workspace = action.workspace if action else "default"
+
+    from src.services.orchestrator import handle_approval
+    dispatched = await handle_approval(action_id, workspace, approved_by=approved_by)
+    logger.info(
+        "[ws] bot_approval: action_id=%s workspace=%s dispatched=%s",
+        action_id, workspace, dispatched,
+    )
+
+
+@sio.event
 async def approval_response(sid: str, data: dict[str, Any]) -> None:
     """
     Mac agent reports back the result of executing an approved resolution.

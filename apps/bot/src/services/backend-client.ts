@@ -88,11 +88,11 @@ export class BackendClient {
     });
   }
 
-  sendApproval(actionId: string): void {
-    this.socket?.emit('approval_response', {
+  sendApproval(actionId: string, approvedBy?: string): void {
+    this.socket?.emit('bot_approval', {
       action_id: actionId,
-      success: true,
-      output: 'Approved via Discord button',
+      workspace: this.options.workspace,
+      approved_by: approvedBy ?? 'discord-user',
     });
   }
 

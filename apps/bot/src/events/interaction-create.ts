@@ -26,9 +26,10 @@ export async function onInteractionCreate(interaction: Interaction): Promise<voi
 
     if (action === 'approve_sync') {
       await interaction.deferUpdate();
-      backendClient.sendApproval(actionId!);
+      const username = interaction.user.username;
+      backendClient.sendApproval(actionId!, username);
       await interaction.editReply({
-        content: `✅ Sync approved! Your local agent is executing the changes...`,
+        content: `✅ Sync approved by **${username}**! Your local agent is executing the changes...`,
         components: [],
       });
     }
