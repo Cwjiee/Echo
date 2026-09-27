@@ -40,11 +40,10 @@ let isConnected = false;
 app.whenReady().then(() => {
   initTray();
   registerIpcHandlers();
+  openHome();
 
   if (store.get('autoConnect') && store.get('authToken')) {
     connect();
-  } else {
-    openSettings();
   }
 });
 
@@ -113,11 +112,18 @@ function connect(): void {
   wsClient.on('connected', () => {
     isConnected = true;
     showNotification('Echo Agent', 'Connected to backend server.');
+    homeWindow?.webContents.send('agent:status', '🟢 Connected');
     settingsWindow?.webContents.send('agent:status', '🟢 Connected');
   });
 
   wsClient.on('disconnected', () => {
     isConnected = false;
+<<<<<<< Updated upstream
+    updateTrayMenu();
+||||||| Stash base
+=======
+    homeWindow?.webContents.send('agent:status', '🔴 Disconnected');
+>>>>>>> Stashed changes
     settingsWindow?.webContents.send('agent:status', '🔴 Disconnected');
   });
 
