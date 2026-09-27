@@ -118,12 +118,7 @@ function connect(): void {
 
   wsClient.on('disconnected', () => {
     isConnected = false;
-<<<<<<< Updated upstream
-    updateTrayMenu();
-||||||| Stash base
-=======
     homeWindow?.webContents.send('agent:status', '🔴 Disconnected');
->>>>>>> Stashed changes
     settingsWindow?.webContents.send('agent:status', '🔴 Disconnected');
   });
 
