@@ -2,6 +2,7 @@
 // The app drives it through window.echoUI (see the bottom of this file).
 const body = document.body;
 const toggleBtn = document.getElementById('toggleBtn');
+const heroTagline = document.getElementById('heroTagline');
 const collapseBtn = document.getElementById('collapseBtn');
 const toggleHandlers = [];
 
@@ -9,6 +10,9 @@ function setListening(listening) {
   if (body.classList.contains('listening') === listening) return;
   body.classList.toggle('listening', listening);
   toggleBtn.textContent = listening ? 'STOP' : 'START';
+  heroTagline.textContent = listening
+    ? 'Stop your local agent to pause running tasks'
+    : 'Start your local agent to run tasks';
   listening ? echoField.start() : echoField.stop();
 }
 
@@ -126,6 +130,53 @@ const echoField = (() => {
     },
   };
 })();
+
+// ── Sidebar bat: sleeping / waking ───────────────────────────────────
+// After a random idle period (20–50 s) the bat flips upside down and
+// switches to the sleeping icon.  Clicking it while sleeping wakes it up.
+const sidebarLogo = document.querySelector('.sidebar-logo');
+let sleepTimer = null;
+let isSleeping = false;
+
+function scheduleSleep() {
+  clearTimeout(sleepTimer);
+  // Random delay: 20–50 seconds.
+  const delay = (20 + Math.random() * 30) * 1000;
+  sleepTimer = setTimeout(goSleep, delay);
+}
+
+function goSleep() {
+  if (isSleeping || sidebarLogo.classList.contains('flying')) {
+    scheduleSleep();
+    return;
+  }
+  isSleeping = true;
+  sidebarLogo.classList.remove('waking');
+  sidebarLogo.classList.add('sleeping');
+}
+
+function goWake() {
+  if (!isSleeping) return;
+  isSleeping = false;
+  sidebarLogo.classList.remove('sleeping');
+  sidebarLogo.classList.add('waking');
+  sidebarLogo.addEventListener('animationend', () => {
+    sidebarLogo.classList.remove('waking');
+    scheduleSleep();
+  }, { once: true });
+}
+
+sidebarLogo.addEventListener('click', () => {
+  if (isSleeping) {
+    goWake();
+    return;
+  }
+  if (sidebarLogo.classList.contains('flying')) return;
+  sidebarLogo.classList.add('flying');
+  sidebarLogo.addEventListener('animationend', () => sidebarLogo.classList.remove('flying'), { once: true });
+});
+
+scheduleSleep();
 
 collapseBtn.addEventListener('click', () => {
   const collapsed = body.classList.toggle('collapsed');

@@ -51,7 +51,10 @@
   <aside class="sidebar">
     <div class="titlebar-spacer"></div>
     <div class="sidebar-header">
-      <svg class="sidebar-logo" viewBox="60 45 330 200" aria-label="Echo"><use href="#bat-awake" /></svg>
+      <svg class="sidebar-logo" viewBox="60 45 330 200" aria-label="Echo">
+        <use class="sidebar-bat-awake" href="#bat-awake" />
+        <use class="sidebar-bat-sleeping" href="#bat-sleeping" />
+      </svg>
       <button class="icon-btn" id="collapseBtn" aria-label="Collapse sidebar" aria-expanded="true">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
           <rect x="1.5" y="2.5" width="13" height="11" rx="2" />
@@ -90,7 +93,10 @@
           <svg class="bat-sleeping" viewBox="60 45 330 200"><use href="#bat-sleeping" /></svg>
           <svg class="bat-awake" viewBox="60 45 330 200"><use href="#bat-awake" /></svg>
         </div>
-        <h1 class="wordmark">ECHO</h1>
+        <div class="hero-text">
+          <h1 class="wordmark">ECHO</h1>
+          <p class="hero-tagline" id="heroTagline">Start your local agent to run tasks</p>
+        </div>
       </div>
 
       <button class="toggle" id="toggleBtn">START</button>
