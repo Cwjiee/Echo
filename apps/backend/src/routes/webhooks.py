@@ -3,7 +3,7 @@
 import hashlib
 import hmac
 import json
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request, status
 
@@ -43,7 +43,7 @@ async def receive_github_webhook(
     background_tasks: BackgroundTasks,
     x_hub_signature_256: Annotated[str | None, Header()] = None,
     x_github_event: Annotated[str | None, Header()] = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Ingests raw GitHub webhook payloads.
 
@@ -56,7 +56,7 @@ async def receive_github_webhook(
     _verify_signature(body, x_hub_signature_256)
 
     event_type = x_github_event or "unknown"
-    payload: dict = json.loads(body)
+    payload: dict[str, Any] = json.loads(body)
 
     # Fire-and-forget: analyse + notify connected Mac agents
     background_tasks.add_task(_process_event, event_type, payload)
@@ -64,7 +64,7 @@ async def receive_github_webhook(
     return {"accepted": True, "event": event_type}
 
 
-async def _process_event(event_type: str, payload: dict) -> None:
+async def _process_event(event_type: str, payload: dict[str, Any]) -> None:
     """Background task: run AI analysis and broadcast result over WebSocket."""
     print(f"[webhook] Processing event: {event_type}")
     summary = await analyze_payload(event_type, payload)

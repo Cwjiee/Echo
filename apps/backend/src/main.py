@@ -1,5 +1,6 @@
 """Echo Backend — FastAPI + Socket.IO entry point."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import socketio
@@ -12,7 +13,7 @@ from src.websocket.manager import sio
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: startup / shutdown hooks."""
     print("[echo] Backend starting up...")
     yield

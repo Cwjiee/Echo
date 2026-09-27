@@ -9,6 +9,8 @@ Manages:
 
 from __future__ import annotations
 
+from typing import Any
+
 import socketio
 
 # ---------------------------------------------------------------------------
@@ -24,7 +26,7 @@ sio = socketio.AsyncServer(
 )
 
 # sid → developer metadata
-_connected_agents: dict[str, dict] = {}
+_connected_agents: dict[str, dict[str, Any]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +35,7 @@ _connected_agents: dict[str, dict] = {}
 
 
 @sio.event
-async def connect(sid: str, environ: dict, auth: dict | None = None) -> bool:
+async def connect(sid: str, environ: dict[str, Any], auth: dict[str, Any] | None = None) -> bool:
     """
     Called when a Mac agent connects.
 
@@ -67,7 +69,7 @@ async def disconnect(sid: str) -> None:
 
 
 @sio.event
-async def approval_response(sid: str, data: dict) -> None:
+async def approval_response(sid: str, data: dict[str, Any]) -> None:
     """
     Mac agent acknowledges that an 'approved_resolution' was executed.
 
@@ -82,7 +84,7 @@ async def approval_response(sid: str, data: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def broadcast_event(event_name: str, data: dict, room: str = "/") -> None:
+async def broadcast_event(event_name: str, data: dict[str, Any], room: str = "/") -> None:
     """Broadcast an event to all connected agents (or a specific room)."""
     if room == "/":
         await sio.emit(event_name, data)
@@ -94,7 +96,7 @@ async def send_approved_resolution(
     workspace: str,
     action_id: str,
     actions: list[str],
-    context: dict,
+    context: dict[str, Any],
 ) -> None:
     """
     Send an approved resolution payload to all agents in a workspace room.

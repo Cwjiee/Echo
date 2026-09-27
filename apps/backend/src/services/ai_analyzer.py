@@ -44,7 +44,7 @@ async def analyze_payload(event_type: str, payload: dict[str, Any]) -> dict[str,
 # ---------------------------------------------------------------------------
 
 
-def _extract_push_context(payload: dict) -> dict:
+def _extract_push_context(payload: dict[str, Any]) -> dict[str, Any]:
     """Extract meaningful data from a 'push' event."""
     commits = payload.get("commits", [])
     return {
@@ -56,7 +56,7 @@ def _extract_push_context(payload: dict) -> dict:
     }
 
 
-def _extract_pr_context(payload: dict) -> dict:
+def _extract_pr_context(payload: dict[str, Any]) -> dict[str, Any]:
     """Extract meaningful data from a 'pull_request' event."""
     pr = payload.get("pull_request", {})
     return {
@@ -70,7 +70,7 @@ def _extract_pr_context(payload: dict) -> dict:
     }
 
 
-def _generic_extractor(payload: dict) -> dict:
+def _generic_extractor(payload: dict[str, Any]) -> dict[str, Any]:
     return {"keys": list(payload.keys())}
 
 
@@ -85,7 +85,7 @@ _EXTRACTORS = {
 # ---------------------------------------------------------------------------
 
 
-async def _call_llm(context: dict) -> str:
+async def _call_llm(context: dict[str, Any]) -> str:
     """
     TODO: Replace with real LLM SDK call.
 
@@ -105,7 +105,7 @@ async def _call_llm(context: dict) -> str:
     return "[AI summary placeholder] Change detected — review required."
 
 
-def _derive_actions(event_type: str, payload: dict) -> list[str]:
+def _derive_actions(event_type: str, payload: dict[str, Any]) -> list[str]:
     """
     Suggest local actions based on event type.
     These are sent to the Mac agent as 'resolution_actions'.
